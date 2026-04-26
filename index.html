@@ -1175,45 +1175,124 @@ function createWorkbook() {
 }
 
 function downloadExcel() {
-    XLSX.writeFile(createWorkbook(), "StoreAudit.xlsx");
+    const summary = buildSummary();
+    const availability = buildAvailability();
+    const sos = buildSOS();
+    const notAvailable = buildNotAvailable();
+
+    let csvContent = "STORE AUDIT SUMMARY
+";
+    csvContent += "Account,Outlet,Intern,GPS,DateTime
+";
+    summary.forEach(row => {
+        csvContent += `${row.Account},${row.Outlet},${row.Intern},${row.GPS},${row.DateTime}
+`;
+    });
+
+    csvContent += "
+AVAILABILITY
+";
+    csvContent += "Category,Available,AvailabilityPercent
+";
+    availability.forEach(row => {
+        csvContent += `${row.Category},\"${row.Available}\",${row.AvailabilityPercent}
+`;
+    });
+
+    csvContent += "
+SHARE OF SHELF
+";
+    csvContent += "Category,Total,Our,Share
+";
+    sos.forEach(row => {
+        csvContent += `${row.Category},${row.Total},${row.Our},${row.Share}
+`;
+    });
+
+    csvContent += "
+NOT AVAILABLE SKUS
+";
+    csvContent += "SKUCode,SKUName
+";
+    notAvailable.forEach(row => {
+        csvContent += `${row.SKUCode},${row.SKUName}
+`;
+    });
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "StoreAudit.csv";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
 
 async function shareExcel() {
     try {
-        const wb = createWorkbook();
+        const summary = buildSummary();
+        const availability = buildAvailability();
+        const sos = buildSOS();
+        const notAvailable = buildNotAvailable();
 
-        const excelBuffer = XLSX.write(wb, {
-            bookType: "xlsx",
-            type: "array"
+        let csvContent = "STORE AUDIT SUMMARY
+";
+        csvContent += "Account,Outlet,Intern,GPS,DateTime
+";
+        summary.forEach(row => {
+            csvContent += `${row.Account},${row.Outlet},${row.Intern},${row.GPS},${row.DateTime}
+`;
         });
 
-        const blob = new Blob(
-            [excelBuffer],
-            {
-                type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            }
-        );
+        csvContent += "
+AVAILABILITY
+";
+        csvContent += "Category,Available,AvailabilityPercent
+";
+        availability.forEach(row => {
+            csvContent += `${row.Category},\"${row.Available}\",${row.AvailabilityPercent}
+`;
+        });
 
-        const fileName = "StoreAudit.xlsx";
+        csvContent += "
+SHARE OF SHELF
+";
+        csvContent += "Category,Total,Our,Share
+";
+        sos.forEach(row => {
+            csvContent += `${row.Category},${row.Total},${row.Our},${row.Share}
+`;
+        });
+
+        csvContent += "
+NOT AVAILABLE SKUS
+";
+        csvContent += "SKUCode,SKUName
+";
+        notAvailable.forEach(row => {
+            csvContent += `${row.SKUCode},${row.SKUName}
+`;
+        });
+
+        const blob = new Blob([csvContent], {
+            type: "text/csv;charset=utf-8;"
+        });
+
+        const fileName = "StoreAudit.csv";
 
         if (navigator.share) {
             try {
-                const file = new File(
-                    [blob],
-                    fileName,
-                    {
-                        type: blob.type
-                    }
-                );
+                const file = new File([blob], fileName, {
+                    type: "text/csv"
+                });
 
                 await navigator.share({
                     files: [file],
                     title: "Store Audit Report",
-                    text: "Store Audit Excel Report"
+                    text: "Store Audit CSV Report"
                 });
 
                 return;
-
             } catch (shareError) {
                 console.log("Direct share failed:", shareError);
             }
@@ -1226,13 +1305,11 @@ async function shareExcel() {
         link.click();
         document.body.removeChild(link);
 
-        alert(
-            "File downloaded successfully. Please share manually from Downloads folder."
-        );
+        alert("CSV downloaded successfully. Please share manually from Downloads folder.");
 
     } catch (error) {
         console.log(error);
-        alert("Error while generating Excel file");
+        alert("Error while generating CSV file");
     }
 }
 
