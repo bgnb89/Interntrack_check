@@ -1,0 +1,1431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Store Audit App - V4.6</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+</head>
+
+<body class="bg-gray-100 pb-24">
+
+<div class="max-w-5xl mx-auto bg-white p-4 md:p-6 rounded-xl shadow space-y-5">
+
+<h2 class="text-xl font-bold text-center">Store Audit App</h2>
+
+<!-- INTERN -->
+<select id="intern" class="border p-3 w-full rounded-lg">
+<option value="">Select Intern</option>
+<option>Sanjay</option>
+<option>Ajay</option>
+<option>Akshay</option>
+<option>Abhiram</option>
+<option>Hiba</option>
+<option>Krishnendu</option>
+<option>Megha</option>
+</select>
+
+<!-- DATE -->
+<input id="dateTime" class="border p-3 w-full bg-gray-100 rounded-lg" readonly>
+
+<!-- ACCOUNT -->
+<select id="account" class="border p-3 w-full rounded-lg"></select>
+
+<!-- OUTLET -->
+<select id="outlet" class="border p-3 w-full rounded-lg"></select>
+
+<!-- GPS -->
+<input id="gps" class="border p-3 w-full bg-gray-100 rounded-lg" readonly>
+
+<button onclick="captureLocation()" class="bg-blue-700 text-white w-full p-3 rounded-lg">
+📍 Capture Location
+</button>
+
+<!-- AVAILABILITY -->
+<div>
+<h3 class="font-semibold text-lg">Availability</h3>
+
+<select id="category" class="border p-3 w-full rounded-lg mt-2"></select>
+
+<div id="productList" class="mt-3 space-y-2"></div>
+
+<div class="mt-2 font-medium">
+Availability %: <span id="availabilityPct">0</span>
+</div>
+</div>
+
+<!-- SHARE OF SHELF -->
+<div>
+<h3 class="font-semibold text-lg">Share of Shelf</h3>
+
+<select id="shelfCategory" class="border p-3 w-full rounded-lg mt-2"></select>
+
+<input
+id="totalFacings"
+type="number"
+inputmode="numeric"
+class="border p-3 w-full mt-2 rounded-lg"
+placeholder="Total Facings"
+>
+
+<input
+id="ourFacings"
+type="number"
+inputmode="numeric"
+class="border p-3 w-full mt-2 rounded-lg"
+placeholder="Our Facings"
+>
+
+<button onclick="addShelf()" class="bg-blue-600 text-white w-full p-3 mt-2 rounded-lg">
+Add to Report
+</button>
+
+<div class="overflow-x-auto mt-3">
+<table class="w-full border text-sm">
+<thead class="bg-gray-200">
+<tr>
+<th>Category</th>
+<th>Total</th>
+<th>Our</th>
+<th>%</th>
+</tr>
+</thead>
+<tbody id="shelfTableBody"></tbody>
+</table>
+</div>
+</div>
+
+</div>
+
+<!-- ACTION BAR -->
+<div class="fixed bottom-0 left-0 right-0 bg-white border-t p-3 flex gap-2">
+
+<button onclick="downloadExcel()" class="bg-green-600 text-white flex-1 p-3 rounded-lg text-sm">
+Download
+</button>
+
+<button onclick="shareExcel()" class="bg-purple-600 text-white flex-1 p-3 rounded-lg text-sm">
+Share
+</button>
+
+<button onclick="saveDraft()" class="bg-yellow-500 flex-1 p-3 rounded-lg text-sm">
+Save
+</button>
+
+<button onclick="clearDraft()" class="bg-red-500 text-white flex-1 p-3 rounded-lg text-sm">
+Clear
+</button>
+
+</div>
+
+<script>
+
+/* =========================================================
+   MASTER DATA
+   IMPORTANT:
+   Replace below sample arrays with your FULL actual data
+========================================================= */
+
+const outlets = [
+  { account: "Lulu", name: "Edappally", city: "Cochin" },
+  { account: "Lulu", name: "Forum Mall", city: "Cochin" },
+  { account: "Lulu", name: "Thriprayar", city: "Thrissur" },
+  { account: "Lulu", name: "Thrissur", city: "Thrissur" },
+
+  { account: "Bismi", name: "Kalamassery", city: "Cochin" },
+  { account: "Bismi", name: "Vytila", city: "Cochin" },
+  { account: "Bismi", name: "Kaloor", city: "Cochin" },
+  { account: "Bismi", name: "Alappuzha", city: "Alappuzha" },
+
+  { account: "Pothys", name: "Kaloor", city: "Cochin" },
+
+  { account: "Nesto", name: "Thrissur", city: "Thrissur" },
+
+  { account: "Reliance", name: "East Fort", city: "Thrissur" },
+  { account: "Reliance", name: "West Fort", city: "Thrissur" },
+  { account: "Reliance", name: "Aswini Jn", city: "Thrissur" },
+  { account: "Reliance", name: "Chalakudy", city: "Thrissur" },
+  { account: "Reliance", name: "Irinjalakuda", city: "Thrissur" },
+  { account: "Reliance", name: "Nucleus", city: "Cochin" },
+  { account: "Reliance", name: "Centre Square", city: "Cochin" },
+  { account: "Reliance", name: "Oberon", city: "Cochin" },
+  { account: "Reliance", name: "Thevara", city: "Cochin" },
+  { account: "Reliance", name: "Marine Drive", city: "Cochin" },
+  { account: "Reliance", name: "Aluva", city: "Cochin" },
+  { account: "Reliance", name: "Irumbanam", city: "Cochin" },
+  { account: "Reliance", name: "Vallathol Jn, Kakkanad", city: "Cochin" },
+  { account: "Reliance", name: "Unichira", city: "Cochin" },
+
+  { account: "Kalyan", name: "North Bus Stand", city: "Thrissur" }
+];
+
+const skuMaster = [
+  { account: "Lulu", category: "Ingredients", skuCode: "fgvin01", skuName: "D/Horse Synthetic Vinegar 1L", mrp: "49" },
+  { account: "Lulu", category: "Ingredients", skuCode: "FGVIN05", skuName: "D/Horse Synthetic Vinegar 500ml", mrp: "32" },
+  { account: "Lulu", category: "Payasam", skuCode: "IPM20", skuName: "D/H Instant Rice Palada Mix 200g", mrp: "85" },
+  { account: "Lulu", category: "Payasam", skuCode: "IPP20", skuName: "D/H Instnt Parip Prdhmn 200g", mrp: "115" },
+  { account: "Lulu", category: "Payasam", skuCode: "PLD30", skuName: "D/Horse Palada Payasam Mix 300g", mrp: "85" },
+  { account: "Lulu", category: "Payasam", skuCode: "RMP30", skuName: "D/H Rice Palada Payasam Mix 300g", mrp: "85" },
+  { account: "Lulu", category: "Payasam", skuCode: "SEM03O", skuName: "D/Horse Semiya Pasyasam 300g", mrp: "85" },
+  { account: "Lulu", category: "Payasam", skuCode: "TCP18", skuName: "Tender Coconut Payasam Mix 180g", mrp: "112" },
+  { account: "Lulu", category: "Flours", skuCode: "IIN02", skuName: "D/Horse Instant Idiyappam 200g", mrp: "84" },
+  { account: "Lulu", category: "Flours", skuCode: "IIN10", skuName: "D/Horse Instant Idiyappam 1kg", mrp: "357" },
+  { account: "Lulu", category: "Flours", skuCode: "UPM25", skuName: "D/Horse Upuma 250g", mrp: "40" },
+  { account: "Lulu", category: "Flours", skuCode: "UPMA80", skuName: "D/H Gluten Free Instant Rice Upuma 80g", mrp: "69" },
+  { account: "Lulu", category: "Flours", skuCode: "RSE02", skuName: "D/Horse Rice Vermicelli 200g", mrp: "62" },
+  { account: "Lulu", category: "Flours", skuCode: "AVP02", skuName: "D/Horse Avalose Powder 200g", mrp: "61" },
+  { account: "Lulu", category: "Pickles", skuCode: "CM901", skuName: "D/H Pickle Combo Pack", mrp: "187" },
+  { account: "Lulu", category: "Pickles", skuCode: "CM100", skuName: "D/Horse Cut Mango Pickle 100g", mrp: "28" },
+  { account: "Lulu", category: "Pickles", skuCode: "CM150", skuName: "D/Horse Cut Mango Pickle 150g", mrp: "56" },
+  { account: "Lulu", category: "Pickles", skuCode: "CM200", skuName: "D/Horse Cut Mango Pickle 200g", mrp: "56" },
+  { account: "Lulu", category: "Pickles", skuCode: "CM400", skuName: "D/Horse Cut Mango Pickle 400g", mrp: "103" },
+  { account: "Lulu", category: "Pickles", skuCode: "CM500", skuName: "D/Horse Mango Pickle 500g", mrp: "113" },
+  { account: "Lulu", category: "Pickles", skuCode: "CM900", skuName: "D/Horse Cut Mango Pickle 900g", mrp: "168" },
+  { account: "Lulu", category: "Ingredients", skuCode: "CNF15", skuName: "D/Horse Corn Flour 150g", mrp: "45" },
+  { account: "Lulu", category: "Ingredients", skuCode: "CNF35", skuName: "D/H Corn Flour 350g", mrp: "87" },
+  { account: "Lulu", category: "Pickles", skuCode: "DA150", skuName: "D/Horse Dates Pickle 150g", mrp: "71" },
+  { account: "Lulu", category: "Pickles", skuCode: "DA200", skuName: "D/Horse Dates Pickle 200g", mrp: "71" },
+  { account: "Lulu", category: "Pickles", skuCode: "DA400", skuName: "D/Horse Dates Pickle 400g", mrp: "140" },
+  { account: "Lulu", category: "Pickles", skuCode: "FP150", skuName: "D/Horse Fish Pickle 150g", mrp: "93" },
+  { account: "Lulu", category: "Pickles", skuCode: "FP200", skuName: "D/Horse Fish Pickle 200g", mrp: "108" },
+  { account: "Lulu", category: "Pickles", skuCode: "FP400", skuName: "D/Horse Fish Pickle 400g", mrp: "195" },
+  { account: "Lulu", category: "Pickles", skuCode: "FP500", skuName: "D/Horse Fish Pickle 500g", mrp: "215" },
+  { account: "Lulu", category: "Pickles", skuCode: "GA150", skuName: "D/Horse Garlic Pickle 150g", mrp: "62" },
+  { account: "Lulu", category: "Pickles", skuCode: "GA200", skuName: "D/Horse Garlic Pickle 200g", mrp: "61" },
+  { account: "Lulu", category: "Pickles", skuCode: "GA400", skuName: "D/Horse Garlic Pickle 400g", mrp: "135" },
+  { account: "Lulu", category: "Pickles", skuCode: "GA500", skuName: "D/Horse Garlic Pickle 500g", mrp: "140" },
+  { account: "Lulu", category: "Masalas & Spices", skuCode: "GAPE2", skuName: "D/Horse Garlic Paste 200g", mrp: "65" },
+  { account: "Lulu", category: "Masalas & Spices", skuCode: "GGPE2", skuName: "D/Horse Ginger Garlic Paste 200g", mrp: "65" },
+  { account: "Lulu", category: "Pickles", skuCode: "GI150", skuName: "D/Horse Ginger Pickle 150g", mrp: "65" },
+  { account: "Lulu", category: "Pickles", skuCode: "GI400", skuName: "D/Horse Ginger Pickle 400g", mrp: "141" },
+  { account: "Lulu", category: "Masalas & Spices", skuCode: "GIPE2", skuName: "D/Horse Ginger Paste 200g", mrp: "65" },
+  { account: "Lulu", category: "Ingredients", skuCode: "GNGRC15", skuName: "D/Horse Instant Ginger Coffee 150g", mrp: "93" },
+  { account: "Lulu", category: "Pickles", skuCode: "HS400", skuName: "D/H Hot & Sweet Lime Pickle 400g", mrp: "131" },
+  { account: "Lulu", category: "Pickles", skuCode: "LM100", skuName: "D/Horse Lime Pickle 100g", mrp: "28" },
+  { account: "Lulu", category: "Pickles", skuCode: "LM150", skuName: "D/Horse Lime Pickle 150g", mrp: "61" },
+  { account: "Lulu", category: "Pickles", skuCode: "LM200", skuName: "D/Horse Lime Pickle 200g", mrp: "56" },
+  { account: "Lulu", category: "Pickles", skuCode: "LM400", skuName: "D/Horse Lime Pickle 400g", mrp: "112" },
+  { account: "Lulu", category: "Pickles", skuCode: "LM500", skuName: "D/Horse Lime Pickle 500g", mrp: "113" },
+  { account: "Lulu", category: "Pickles", skuCode: "LM900", skuName: "D/H Lime Pickle 900g", mrp: "187" },
+  { account: "Lulu", category: "Ingredients", skuCode: "MCR04", skuName: "D/Horse Macaroni 400g", mrp: "62" },
+  { account: "Lulu", category: "Ingredients", skuCode: "MCR05", skuName: "D/Horse Macaroni 200g", mrp: "34" },
+  { account: "Lulu", category: "Ingredients", skuCode: "MCR08", skuName: "D/H Macroni 800g", mrp: "108" },
+  { account: "Lulu", category: "Pickles", skuCode: "MM400", skuName: "D/Horse Kaduku Mango Pickle 400g", mrp: "121" },
+  { account: "Lulu", category: "Pickles", skuCode: "PR150", skuName: "D/Horse Prawns Pickle 150g", mrp: "103" },
+  { account: "Lulu", category: "Pickles", skuCode: "PR200", skuName: "D/Horse Prawns Pickle 200g", mrp: "108" },
+  { account: "Lulu", category: "Pickles", skuCode: "PR400", skuName: "D/Horse Prawns Pickle 400g", mrp: "225" },
+  { account: "Lulu", category: "Pickles", skuCode: "PR500", skuName: "D/Horse Prawns Pickle 500g", mrp: "253" },
+  { account: "Lulu", category: "Ingredients", skuCode: "SCY03", skuName: "D/Horse Soya Chunks 200g", mrp: "47" },
+  { account: "Lulu", category: "Ingredients", skuCode: "SCYCN02", skuName: "D/Horse Soya Chungs Nano 200g", mrp: "49" },
+  { account: "Lulu", category: "Pickles", skuCode: "TM150", skuName: "D/Horse Tender Mango Pickle 150g", mrp: "103" },
+  { account: "Lulu", category: "Pickles", skuCode: "TM200", skuName: "D/Horse Tender Mango Pickle 200g", mrp: "103" },
+  { account: "Lulu", category: "Pickles", skuCode: "TM400", skuName: "D/Horse Tender Mango Pickle 400g", mrp: "234" },
+  { account: "Lulu", category: "Pickles", skuCode: "TM500", skuName: "D/Horse Tender Mango Pickle 500g", mrp: "253" },
+  { account: "Lulu", category: "Flours", skuCode: "ADA2M", skuName: "D/Horse Rice Palada 200g", mrp: "45" },
+  { account: "Lulu", category: "Flours", skuCode: "ADA5M", skuName: "D/H Rice Palada 500g", mrp: "99" },
+  { account: "Lulu", category: "Flours", skuCode: "ARN05", skuName: "D/Horse Aval Red 500g", mrp: "79" },
+  { account: "Lulu", category: "Flours", skuCode: "ART05", skuName: "D/Horse Aval Thick Red 500g", mrp: "79" },
+  { account: "Lulu", category: "Ingredients", skuCode: "ASFTP05", skuName: "D/Horse Asafoetida Powder 50g", mrp: "89" },
+  { account: "Lulu", category: "Flours", skuCode: "AWN05", skuName: "D/Horse Aval White 500g", mrp: "73" },
+  { account: "Lulu", category: "Flours", skuCode: "AWT04", skuName: "D/H White Aval Thick 400g", mrp: "59" },
+  { account: "Lulu", category: "Masalas & Spices", skuCode: "BMP10", skuName: "D/Horse Biriyani Masala 100g", mrp: "60" },
+  { account: "Lulu", category: "Porridge", skuCode: "BRMB5", skuName: "D/H Brn Rich Mata Brkn Rice500gm", mrp: "51" },
+  { account: "Lulu", category: "Flours", skuCode: "CATA1", skuName: "D/Horse Chakki Fresh Atta 1kg", mrp: "79" },
+  { account: "Lulu", category: "Flours", skuCode: "CATA2", skuName: "D/H Chakki Fresh Atta 2kg", mrp: "155" },
+  { account: "Lulu", category: "Flours", skuCode: "CATA5", skuName: "D/Horse Chakky Fresh Atta 5kg", mrp: "379" },
+  { account: "Lulu", category: "Masalas & Spices", skuCode: "CHM10", skuName: "D/Horse Chicken Masala 100g", mrp: "55" },
+  { account: "Lulu", category: "Masalas & Spices", skuCode: "CHP01", skuName: "D/Horse Chilly Powder 1kg", mrp: "423" },
+  { account: "Lulu", category: "Masalas & Spices", skuCode: "CHP25", skuName: "D/Horse Chilly Powder 250g", mrp: "109" },
+  { account: "Lulu", category: "Masalas & Spices", skuCode: "CHP50", skuName: "D/Horse Chilly Powder 500g", mrp: "214" },
+  { account: "Lulu", category: "Masalas & Spices", skuCode: "CIP10", skuName: "D/Horse Chilly Powder 100g", mrp: "44" },
+  { account: "Lulu", category: "Grain", skuCode: "CMB01", skuName: "D/Horse Chef Mate 1kg", mrp: "249" },
+  { account: "Lulu", category: "Grain", skuCode: "JYP01", skuName: "D/H IPM Vadimatta Rice 50% Bran 1kg", mrp: "129" },
+  { account: "Lulu", category: "Grain", skuCode: "JYPBR1", skuName: "D/H IPM Vadimatta Rice 100% Bran1kg", mrp: "116" },
+  { account: "Lulu", category: "Masalas & Spices", skuCode: "COP01", skuName: "D/Horse Coriander Powder 1kg", mrp: "312" },
+  { account: "Lulu", category: "Masalas & Spices", skuCode: "COP10", skuName: "D/Horse Coriander Powder 100g", mrp: "33" },
+  { account: "Lulu", category: "Masalas & Spices", skuCode: "COP25", skuName: "D/Horse Coriander Powder 250g", mrp: "81" },
+  { account: "Lulu", category: "Masalas & Spices", skuCode: "COP50", skuName: "D/Horse Coriander Powder 500g", mrp: "159" },
+  { account: "Lulu", category: "Flours", skuCode: "CPP01", skuName: "D/Horse Chemba Puttu Podi 1kg", mrp: "135" },
+  { account: "Lulu", category: "Flours", skuCode: "CPP05", skuName: "D/Horse Chemba Puttu Podi 500g", mrp: "69" },
+  { account: "Lulu", category: "Flours", skuCode: "CPU05", skuName: "D/Horse Corn Puttu Podi 500g", mrp: "69" },
+  { account: "Lulu", category: "Masalas & Spices", skuCode: "EGM10", skuName: "D/Horse Egg Masala 100g", mrp: "48" },
+  { account: "Lulu", category: "Flours", skuCode: "ESY05", skuName: "D/Horse Easy Palappam 500g", mrp: "59" },
+  { account: "Lulu", category: "Flours", skuCode: "ESYP1", skuName: "D/Horse Easy Palappam 1kg", mrp: "109" },
+  { account: "Lulu", category: "Flours", skuCode: "FGRAD02", skuName: "D/H Ribbon Ada 200g", mrp: "54" },
+  { account: "Lulu", category: "Masalas & Spices", skuCode: "FHM10", skuName: "D/Horse Fish Masala 100g", mrp: "55" },
+  { account: "Lulu", category: "Masalas & Spices", skuCode: "GMA50", skuName: "D/Horse Garam Masala 50g", mrp: "55" },
+  { account: "Lulu", category: "Flours", skuCode: "IDM05", skuName: "D/H 1Hour Idli Dosa Mix 500g", mrp: "85" },
+  { account: "Lulu", category: "Flours", skuCode: "IP1KG", skuName: "D/H Idiyappam Pwdr NormWater 1kg", mrp: "112" },
+  { account: "Lulu", category: "Flours", skuCode: "IP500", skuName: "D/Horse Idiyappam Powder 500g", mrp: "59" },
+  { account: "Lulu", category: "Ingredients", skuCode: "JP400", skuName: "D/H Jaggery Powder 400gm", mrp: "69" },
+  { account: "Lulu", category: "Masalas & Spices", skuCode: "KAC500", skuName: "D/H Kashmiri Chilli Powder 500g", mrp: "333" },
+  { account: "Lulu", category: "Masalas & Spices", skuCode: "KC100", skuName: "D/Horse Kashmiri Chilly Powder 100g", mrp: "68" },
+  { account: "Lulu", category: "Masalas & Spices", skuCode: "KC250", skuName: "D/H Kashmiri Chilli Powder 250g", mrp: "169" },
+  { account: "Lulu", category: "Flours", skuCode: "LVER40", skuName: "D/Horse Long Vermicelli 400g", mrp: "60" },
+  { account: "Lulu", category: "Porridge", skuCode: "MBE01", skuName: "D/Horse Matta Broken 1kg", mrp: "119" },
+  { account: "Lulu", category: "Porridge", skuCode: "MBEH5", skuName: "D/Horse Matta Broken 500g", mrp: "64" },
+  { account: "Lulu", category: "Grain", skuCode: "MCB01", skuName: "D/H Jeerakashala Rice 1kg", mrp: "275" },
+  { account: "Lulu", category: "Grain", skuCode: "MCB05", skuName: "JEERAKASHALA RICE 5KG", mrp: "1299" },
+  { account: "Lulu", category: "Masalas & Spices", skuCode: "MTM10", skuName: "D/Horse Meat Masala 100g", mrp: "55" },
+  { account: "Lulu", category: "Masalas & Spices", skuCode: "PP50", skuName: "D/H Pepper Powder 50g", mrp: "85" },
+  { account: "Lulu", category: "Flours", skuCode: "PPO05", skuName: "D/H Roasted Pathiri Flour 500g", mrp: "59" },
+  { account: "Lulu", category: "Masalas & Spices", skuCode: "PPP10", skuName: "D/Horse Pepper Powder 100g", mrp: "165" },
+  { account: "Lulu", category: "Masalas & Spices", skuCode: "PPW10", skuName: "D/Horse Pickle Powder 100g", mrp: "54" },
+  { account: "Lulu", category: "Flours", skuCode: "PTRI1", skuName: "D/Horse Pathiri Powder 1kg", mrp: "109" },
+  { account: "Lulu", category: "Flours", skuCode: "RAVA1", skuName: "D/Horse Roasted Rava 1kg", mrp: "110" },
+  { account: "Lulu", category: "Flours", skuCode: "RAVA5", skuName: "D/Horse Fried Rava 500g", mrp: "59" },
+  { account: "Lulu", category: "Flours", skuCode: "RGIP5", skuName: "D/Horse Ragi Powder 500g", mrp: "72" },
+  { account: "Lulu", category: "Flours", skuCode: "RGN1K", skuName: "D/H Ragi Nice Powder 1kg", mrp: "132" },
+  { account: "Lulu", category: "Flours", skuCode: "RGPU5", skuName: "D/Horse Ragi Puttu Podi 500g", mrp: "73" },
+  { account: "Lulu", category: "Masalas & Spices", skuCode: "RMM10", skuName: "D/Horse Rasam Masala 100g", mrp: "58" },
+  { account: "Lulu", category: "Flours", skuCode: "MA500", skuName: "Double Horse Maida 500gm", mrp: "46" },
+  { account: "Lulu", category: "Flours", skuCode: "MAI01", skuName: "Double Horse Maida 1Kg", mrp: "89" },
+  { account: "Lulu", category: "Flours", skuCode: "RPOW1", skuName: "D/Horse White Rice Powder Appam 1kg", mrp: "99" },
+  { account: "Lulu", category: "Flours", skuCode: "RPOW5", skuName: "D/Horse White Rice Powder Appam 500g", mrp: "52" },
+  { account: "Lulu", category: "Flours", skuCode: "RPOW5K", skuName: "D/Horse White Rice Flour 5kg", mrp: "475" },
+  { account: "Lulu", category: "Flours", skuCode: "RWRFR01", skuName: "D/Horse Roasted White Rice Flour 1kg", mrp: "99" },
+  { account: "Lulu", category: "Flours", skuCode: "RWRFR02", skuName: "D/Horse Roasted White Rice Flour 500g", mrp: "52" },
+  { account: "Lulu", category: "Masalas & Spices", skuCode: "SMP10", skuName: "D/Horse Sambar Powder 100g", mrp: "51" },
+  { account: "Lulu", category: "Porridge", skuCode: "SWBH5", skuName: "D/Horse Wheat Broken 500g", mrp: "137" },
+  { account: "Lulu", category: "Porridge", skuCode: "SWBO1", skuName: "D/Horse Samba Wheat Broken 1kg", mrp: "255" },
+  { account: "Lulu", category: "Porridge", skuCode: "SWF05", skuName: "D/Horse Wheat Broken Nice 500g", mrp: "140" },
+  { account: "Lulu", category: "Masalas & Spices", skuCode: "TUP10", skuName: "D/Horse Turmeric Powder 100g", mrp: "39" },
+  { account: "Lulu", category: "Masalas & Spices", skuCode: "TUP25", skuName: "D/Horse Turmeric Powder 250g", mrp: "99" },
+  { account: "Lulu", category: "Flours", skuCode: "UVR15", skuName: "D/H Un Roasted Vermicelli 150g", mrp: "29" },
+  { account: "Lulu", category: "Flours", skuCode: "VER20", skuName: "D/Horse Roasted Vermicelli 200g", mrp: "29" },
+  { account: "Lulu", category: "Flours", skuCode: "VER40", skuName: "D/H Roasted Vermicelli 400g", mrp: "59" },
+  { account: "Lulu", category: "Flours", skuCode: "VER80", skuName: "D/H Roasted Vermicelli 800g", mrp: "117" },
+  { account: "Lulu", category: "Masalas & Spices", skuCode: "VGM10", skuName: "D/Horse Vegetable Masala 100g.", mrp: "47" },
+  { account: "Lulu", category: "Porridge", skuCode: "WBF05", skuName: "D/H Bansi Wheat Rava 500g", mrp: "59" },
+  { account: "Lulu", category: "Porridge", skuCode: "WBO05", skuName: "D/H Bansi Wheat Broken 500g", mrp: "59" },
+  { account: "Lulu", category: "Flours", skuCode: "WPP05", skuName: "D/H Wheat Puttu Podi 500g", mrp: "75" },
+  { account: "Lulu", category: "Flours", skuCode: "WPU05", skuName: "D/Horse White Puttu Podi 500g", mrp: "55" },
+  { account: "Lulu", category: "Flours", skuCode: "WPUT1", skuName: "D/Horse White Puttu Podi 1kg", mrp: "99" },
+  { account: "Lulu", category: "Flours", skuCode: "WPUT5", skuName: "D/Horse White Puttu Podi 5kg", mrp: "475" },
+  { account: "Lulu", category: "Ingredients", skuCode: "TMPE5", skuName: "D/Horse Tamarind 500g", mrp: "149" },
+  { account: "Lulu", category: "Ingredients", skuCode: "TMPE2P", skuName: "D/Horse Tamarind 200g", mrp: "60" },
+  { account: "Lulu", category: "Ingredients", skuCode: "PAD01", skuName: "Double Horse Pappad 100gm", mrp: "45" },
+  { account: "Lulu", category: "Grain", skuCode: "CHS05", skuName: "D/Horse P/Boiled RiceCherumani 5kg", mrp: "348" },
+  { account: "Lulu", category: "Grain", skuCode: "CHS10", skuName: "D/Horse P/Boiled RiceCherumani 10kg", mrp: "690" },
+  { account: "Lulu", category: "Grain", skuCode: "JYA05", skuName: "D/Horse Jaya Rice 5kg", mrp: "363" },
+  { account: "Lulu", category: "Grain", skuCode: "JYA10", skuName: "D/Horse Jaya Rice 10kg", mrp: "719" },
+  { account: "Lulu", category: "Grain", skuCode: "JYP05", skuName: "D/H Jyothi Vadi Matta Rice 5kg", mrp: "374" },
+  { account: "Lulu", category: "Grain", skuCode: "JYP10", skuName: "D/H Jyothi Vadi Matta Rice 10kg", mrp: "750" },
+  { account: "Lulu", category: "Grain", skuCode: "PRS05", skuName: "D/Horse Ponni Rice 5kg", mrp: "471" },
+  { account: "Lulu", category: "Grain", skuCode: "PRS10", skuName: "D/Horse Ponni Rice 10kg", mrp: "935" },
+  { account: "Lulu", category: "Grain", skuCode: "RMP05", skuName: "D/Horse Unda Matta 5kg", mrp: "387" },
+  { account: "Lulu", category: "Grain", skuCode: "RMP10", skuName: "D/Horse Unda Matta10kg", mrp: "768" },
+  { account: "Lulu", category: "Grain", skuCode: "SMR05", skuName: "D/Horse Single Matta Rice 5kg", mrp: "348" },
+  { account: "Lulu", category: "Grain", skuCode: "SMR10", skuName: "D/Horse Single Matta Rice 10kg", mrp: "689" },
+  { account: "Lulu", category: "Grain", skuCode: "SSR05", skuName: "D/Horse Surekha Rice 5kg", mrp: "373" },
+  { account: "Lulu", category: "Grain", skuCode: "SSR10", skuName: "D/Horse Surekha Rice 10kg", mrp: "739" },
+  { account: "Bismi", category: "Ingredients", skuCode: "FGVIN05", skuName: "DOUBLE HORSE SYNTHTIC VINEGAR 500 ML BTL", mrp: "32" },
+  { account: "Bismi", category: "Ingredients", skuCode: "fgvin01", skuName: "DOUBLE HORSE SYNTHETIC VINGAR 1 L PET", mrp: "49" },
+  { account: "Bismi", category: "Payasam", skuCode: "PLD30", skuName: "DOUBLE HORSE PALADA PAYASAM MIX 300G CBD", mrp: "85" },
+  { account: "Bismi", category: "Payasam", skuCode: "RMP30", skuName: "DOUBLE HORSE RICE PALADA MIX 300 g CBD", mrp: "85" },
+  { account: "Bismi", category: "Payasam", skuCode: "SEM03O", skuName: "DOUBLE HRS VERMICELLI KHEER MIX 300G CBD", mrp: "85" },
+  { account: "Bismi", category: "Payasam", skuCode: "IPM20", skuName: "DOUBLE HORSE SADHAYA PALADA MIX200gPP", mrp: "85" },
+  { account: "Bismi", category: "Payasam", skuCode: "IPP20", skuName: "DBH INSTANT PARIPPU PRADHAMAN 200G", mrp: "115" },
+  { account: "Bismi", category: "Payasam", skuCode: "TCP18", skuName: "Tender Coconut Payasam Mix 180g", mrp: "112" },
+  { account: "Bismi", category: "Flours", skuCode: "IIN02", skuName: "Instant Idiyappam 200g (New)", mrp: "84" },
+  { account: "Bismi", category: "Flours", skuCode: "UPM25", skuName: "DOUBLE HORSE UPMA MIX 250 g PP", mrp: "40" },
+  { account: "Bismi", category: "Flours", skuCode: "RSE02", skuName: "DH RICE SEVAI200G(P)", mrp: "62" },
+  { account: "Bismi", category: "Pickles", skuCode: "LM900", skuName: "DOUBLE HORSE LIME PICKLE 900 g PET", mrp: "187" },
+  { account: "Bismi", category: "Flours", skuCode: "AVP02", skuName: "DH  AVALOSEPODI 200GM", mrp: "61" },
+  { account: "Bismi", category: "Ingredients", skuCode: "CNF15", skuName: "DOUBLE HORSE CORN FLOUR 150 g CBD", mrp: "45" },
+  { account: "Bismi", category: "Pickles", skuCode: "CM900", skuName: "DOUBLE HORSE CUT MANGO PICKLE 900 g PET", mrp: "168" },
+  { account: "Bismi", category: "Ingredients", skuCode: "SCY03", skuName: "DOUBLE HORSE SOYA CHUNKS 200 g PCH", mrp: "47" },
+  { account: "Bismi", category: "Pickles", skuCode: "CM200", skuName: "DOUBLE HORSE CUT MANGO PICKLE 200 g PP", mrp: "56" },
+  { account: "Bismi", category: "Pickles", skuCode: "CM400", skuName: "DOUBLE HORSE CUT MANGO PICKLE 400 g BTL", mrp: "103" },
+  { account: "Bismi", category: "Pickles", skuCode: "CM500", skuName: "DOUBLEHORSE CUT MANGO PICKLE 500 g PP", mrp: "113" },
+  { account: "Bismi", category: "Pickles", skuCode: "DA400", skuName: "DOUBLE HORSE DATES PICKLE 400 g BTL", mrp: "140" },
+  { account: "Bismi", category: "Pickles", skuCode: "DA200", skuName: "DOUBLE HORSE DATES PICKLE 200 g PP", mrp: "71" },
+  { account: "Bismi", category: "Pickles", skuCode: "FP200", skuName: "DOUBLE HORSE FISH PICKLE 200 g PP", mrp: "108" },
+  { account: "Bismi", category: "Pickles", skuCode: "FP400", skuName: "DOUBLE HORSE FISH PICKLE 400 g BTL", mrp: "195" },
+  { account: "Bismi", category: "Pickles", skuCode: "FP500", skuName: " DOUBLE HORSE FISH PICKLE 500G", mrp: "215" },
+  { account: "Bismi", category: "Pickles", skuCode: "GA200", skuName: "DOUBLE HORSE GARLIC PICKLE\u00a0 200 g PP", mrp: "61" },
+  { account: "Bismi", category: "Pickles", skuCode: "GA400", skuName: "DOUBLE HORSE GARLIC PICKLE 400 g BTL", mrp: "135" },
+  { account: "Bismi", category: "Pickles", skuCode: "GA500", skuName: "DOUBLE HORSE GARLIC PICKLE 500g", mrp: "140" },
+  { account: "Bismi", category: "Pickles", skuCode: "LM200", skuName: "DOUBLE HORSE LIME PICKLE 200 g PP", mrp: "56" },
+  { account: "Bismi", category: "Pickles", skuCode: "LM400", skuName: "DOUBL HORSE LIME PICKLE 400 g BTL", mrp: "112" },
+  { account: "Bismi", category: "Pickles", skuCode: "LM500", skuName: "DOUBLEHORSE LIME PICKLE 500 g PP", mrp: "113" },
+  { account: "Bismi", category: "Ingredients", skuCode: "MCR04", skuName: "DOUBLE HORSE MACRONI 400G", mrp: "62" },
+  { account: "Bismi", category: "Pickles", skuCode: "PR500", skuName: "DOUBLE HORSE PRAWN PICKLE 500G", mrp: "253" },
+  { account: "Bismi", category: "Pickles", skuCode: "PR200", skuName: "DOUBLE HORSE PRAWN PICKLE 200 g PP", mrp: "108" },
+  { account: "Bismi", category: "Pickles", skuCode: "PR400", skuName: "DOUBLE HORSE PRAWN PICKLE 400 g JAR", mrp: "225" },
+  { account: "Bismi", category: "Pickles", skuCode: "TM200", skuName: "DOUBLEHORSE TENDR MANGO PICKLE 200 g PP", mrp: "103" },
+  { account: "Bismi", category: "Pickles", skuCode: "TM400", skuName: "DOUBLE HORSE TNDR MANGO PICKLE 400 g BTL", mrp: "234" },
+  { account: "Bismi", category: "Pickles", skuCode: "TM500", skuName: "DOUBLE HORSE TENDER MANGO PICKLE 500g", mrp: "253" },
+  { account: "Bismi", category: "Masalas & Spices", skuCode: "GAPE2", skuName: "DOUBLE HORSE GARLIC PASTE 200g", mrp: "65" },
+  { account: "Bismi", category: "Ingredients", skuCode: "GNGRC15", skuName: "DOUBLE HORSE GINGER COFFEE 150 g BTL", mrp: "93" },
+  { account: "Bismi", category: "Pickles", skuCode: "MM400", skuName: "DOUBLE HORSE KADU MANGO PICKLE 400 g BTL", mrp: "121" },
+  { account: "Bismi", category: "Ingredients", skuCode: "MCR05", skuName: "DOUBLE HORSE MACRONI 200G", mrp: "34" },
+  { account: "Bismi", category: "Ingredients", skuCode: "SCYCN02", skuName: "DOUBLE HORSE SOYA CHUNKS NANO 200 g PP", mrp: "49" },
+  { account: "Bismi", category: "Ingredients", skuCode: "JP500", skuName: "DOUBLE HORSE JAGGERY POWDER 500G PP", mrp: "85" },
+  { account: "Bismi", category: "Flours", skuCode: "IP1KG", skuName: "DOUBLE HORSE POWDER 6 MINUTE IDYP 1KG PP", mrp: "112" },
+  { account: "Bismi", category: "Masalas & Spices", skuCode: "CIP10", skuName: "DOUBLE HORSE CHILLY POWDER 100GM PP", mrp: "44" },
+  { account: "Bismi", category: "Masalas & Spices", skuCode: "CHP25", skuName: "DOUBLE HORSE CHILLY POWDER 250 G PP", mrp: "109" },
+  { account: "Bismi", category: "Flours", skuCode: "ARN05", skuName: "DOUBLE HORSE AVAL RED POHA 500 G PP", mrp: "79" },
+  { account: "Bismi", category: "Flours", skuCode: "AWN05", skuName: "DOUBLE HORSE AVAL WHITE 500 g PP", mrp: "73" },
+  { account: "Bismi", category: "Masalas & Spices", skuCode: "BMP10", skuName: "DOUBLE HORSE CHICKEN BIRIYANI 100GM", mrp: "60" },
+  { account: "Bismi", category: "Flours", skuCode: "CPP01", skuName: "DOUBLE HORSE CHEMBA RICE PODI 1 kg PP", mrp: "135" },
+  { account: "Bismi", category: "Flours", skuCode: "CPP05", skuName: "DOUBLE HORSE CHEMBA PUTTU PODI 500 g PP", mrp: "69" },
+  { account: "Bismi", category: "Masalas & Spices", skuCode: "CHM10", skuName: "DOUBLE HORSE CHICKEN MASALA 100 g PP", mrp: "55" },
+  { account: "Bismi", category: "Masalas & Spices", skuCode: "COP10", skuName: "DOUBLE HORSE CORIANDER POWDER 100GM PP", mrp: "33" },
+  { account: "Bismi", category: "Masalas & Spices", skuCode: "COP25", skuName: "DOUBLE HORSE CORIANDER POWDER 250G PP", mrp: "81" },
+  { account: "Bismi", category: "Flours", skuCode: "ESYP1", skuName: "DOUBLE HORSE PALAPPAM PODI FLOUR 1kg", mrp: "109" },
+  { account: "Bismi", category: "Flours", skuCode: "ESY05", skuName: "DOUBLE HORSE EASY PALPAM PODI 500 g PP", mrp: "59" },
+  { account: "Bismi", category: "Masalas & Spices", skuCode: "EGM10", skuName: "DOUBLE HORSE EGG ROAST MASALA 100G PP", mrp: "48" },
+  { account: "Bismi", category: "Masalas & Spices", skuCode: "FHM10", skuName: "DOUBLE HORSE FISH MASALA 100 g", mrp: "55" },
+  { account: "Bismi", category: "Flours", skuCode: "RAVA1", skuName: "DOUBLE HORSE ROASTED RAWA 1 KG PP", mrp: "110" },
+  { account: "Bismi", category: "Flours", skuCode: "RAVA5", skuName: "DOUBLE HORSE ROSTED RAWA 500 g PP", mrp: "59" },
+  { account: "Bismi", category: "Masalas & Spices", skuCode: "GMA50", skuName: "DOUBLE HORSE MASALA GARAM 50 g PCH", mrp: "55" },
+  { account: "Bismi", category: "Flours", skuCode: "LVER40", skuName: "DOUBLE HORSE LONG VERMICELLI 400 g PP", mrp: "60" },
+  { account: "Bismi", category: "Masalas & Spices", skuCode: "MTM10", skuName: "DOUBLE HORSE MEAT MASALA 100 g PP", mrp: "55" },
+  { account: "Bismi", category: "Flours", skuCode: "PTRI1", skuName: "DOUBLE HORSE PATHRI PODI FLOUR 1kg", mrp: "109" },
+  { account: "Bismi", category: "Masalas & Spices", skuCode: "PPP10", skuName: "DOUBLE HRSE SPICE PEPPER POWDER 100 g PP", mrp: "165" },
+  { account: "Bismi", category: "Masalas & Spices", skuCode: "PPW10", skuName: "DOUBLE HORSE PICKLE POWDER 100GM", mrp: "54" },
+  { account: "Bismi", category: "Flours", skuCode: "RGPU5", skuName: "DOUBLE HORSE RAGI PUTTU PODI 500 g PP", mrp: "73" },
+  { account: "Bismi", category: "Masalas & Spices", skuCode: "RMM10", skuName: "DOUBLE HORSE RASAM MASALA 100GM", mrp: "58" },
+  { account: "Bismi", category: "Flours", skuCode: "ADA2M", skuName: "DOUBLE HORSE RICE PALADA 200 g PCH", mrp: "45" },
+  { account: "Bismi", category: "Flours", skuCode: "ADA5M", skuName: "DOUBLE HORSE RICE PALADA 500g PCH", mrp: "99" },
+  { account: "Bismi", category: "Flours", skuCode: "VER20", skuName: "DH RO VERMECELLI 200 g PP", mrp: "29" },
+  { account: "Bismi", category: "Masalas & Spices", skuCode: "SMP10", skuName: "DOUBLE HORSE SAMBAR POWDER 100 g PP", mrp: "51" },
+  { account: "Bismi", category: "Masalas & Spices", skuCode: "TUP10", skuName: "DOUBLE HORSE TURMERIC POWDER100GM", mrp: "39" },
+  { account: "Bismi", category: "Masalas & Spices", skuCode: "TUP25", skuName: "DOUBLE HORSE TURMERIC POWDER 250 G PP", mrp: "99" },
+  { account: "Bismi", category: "Masalas & Spices", skuCode: "VGM10", skuName: "DOUBLE HORSE VEG MASALA 100GM", mrp: "47" },
+  { account: "Bismi", category: "Porridge", skuCode: "SWBO1", skuName: "DOUBLE HORSE SAMBA BROKEN WHEAT PP 1kg", mrp: "255" },
+  { account: "Bismi", category: "Porridge", skuCode: "SWBH5", skuName: "DOUBLE HORSE SAMBA BROKEN WHEAT 500 g PP", mrp: "137" },
+  { account: "Bismi", category: "Flours", skuCode: "WPUT1", skuName: "DOUBLE HORSE RICE POWDER PUTTU 1 kg PP", mrp: "99" },
+  { account: "Bismi", category: "Flours", skuCode: "WPU05", skuName: "DOUBLE HORSE RICE POWDER PUTTU 500 g PP", mrp: "55" },
+  { account: "Bismi", category: "Flours", skuCode: "RPOW1", skuName: "DOUBLE HORSE RICE POWDER APPAM 1 kg PP", mrp: "99" },
+  { account: "Bismi", category: "Flours", skuCode: "RPOW5", skuName: "DOUBLE HORSE RSTD WHT RICE PWDR 500 g PP", mrp: "52" },
+  { account: "Bismi", category: "Flours", skuCode: "ART05", skuName: "DOUBLE HORSE AVAL RED THICK 500 g PCH", mrp: "79" },
+  { account: "Bismi", category: "Flours", skuCode: "IP500", skuName: "DOUBLE HORSE POWDER 6 MIN IDYP 500 g PP", mrp: "59" },
+  { account: "Bismi", category: "Ingredients", skuCode: "JP400", skuName: "DOUBLE HORSE JAGGERY POWDER 400GM", mrp: "69" },
+  { account: "Bismi", category: "Porridge", skuCode: "MBE01", skuName: "DOUBLE HORSE MATTA BROKEN 1KG", mrp: "119" },
+  { account: "Bismi", category: "Porridge", skuCode: "MBEH5", skuName: "DOUBLE HORSE MATTA BROKEN RICE 500 g PP", mrp: "64" },
+  { account: "Bismi", category: "Flours", skuCode: "WPUT5", skuName: "DOUBLE HORSE WHITE PUTTU PODI 5 kg BAG", mrp: "475" },
+  { account: "Bismi", category: "Flours", skuCode: "FGRAD02", skuName: "DOUBLE HORSE RIBBON ADA 200G PCH", mrp: "54" },
+  { account: "Bismi", category: "Flours", skuCode: "RPOW5K", skuName: "DOUBLE HORSE APM IDIYAPPM FLOUR 5 kg BAG", mrp: "475" },
+  { account: "Bismi", category: "Flours", skuCode: "VER40", skuName: "DOUBLE HORSE ROASTED VERMICELLI 400 g PP", mrp: "59" },
+  { account: "Bismi", category: "Porridge", skuCode: "SWF05", skuName: "DOUBLE HORSE SAMBA WHEAT RAWA 500 g PP", mrp: "140" },
+  { account: "Bismi", category: "Ingredients", skuCode: "TMPE2P", skuName: "DOUBLE HORSE TAMARIND 200g CBD", mrp: "60" },
+  { account: "Bismi", category: "Ingredients", skuCode: "TMPE5", skuName: "DOUBLE HORSE TAMARIND INDIAN 500 g PCH", mrp: "149" },
+  { account: "Bismi", category: "Grain", skuCode: "CHS05", skuName: "DOUBLE HORSE CHERUMANI STX 5KG", mrp: "348" },
+  { account: "Bismi", category: "Grain", skuCode: "CHS10", skuName: "DOUBLE HORSE CHERUMANI STX 10 kg BAG", mrp: "690" },
+  { account: "Bismi", category: "Grain", skuCode: "JYA05", skuName: "DOUBLE HORSE JAYA RICE STX 5 kg PP", mrp: "363" },
+  { account: "Bismi", category: "Grain", skuCode: "JYA10", skuName: "DOUBLE HORSE JAYA RICE STX 10 kg BAG", mrp: "719" },
+  { account: "Bismi", category: "Grain", skuCode: "JYP05", skuName: "DOUBLE HORSE VADI MATTA RICE 5 Kg BAG", mrp: "374" },
+  { account: "Bismi", category: "Grain", skuCode: "JYP10", skuName: "DOUBLE HORSE VADI MATTA RICE 10 Kg BAG", mrp: "750" },
+  { account: "Bismi", category: "Grain", skuCode: "PRS05", skuName: "DOUBLE HORSE PONNI RICE STX 5 kg PP", mrp: "471" },
+  { account: "Bismi", category: "Grain", skuCode: "RMP05", skuName: "DOUBLE HORSE PALAKKADAN MT RCE 5KG BAG", mrp: "387" },
+  { account: "Bismi", category: "Grain", skuCode: "RMP10", skuName: "DOUBLE HORSE PALAKKAM MATA RICE 10kg BAG", mrp: "768" },
+  { account: "Bismi", category: "Grain", skuCode: "SMR05", skuName: "DOUBLE HORSE SINGLE MATTA 5 kg PP", mrp: "348" },
+  { account: "Bismi", category: "Grain", skuCode: "SMR10", skuName: "DOUBLE HORSE SINGLE MATTA 10 kg BAG", mrp: "689" },
+  { account: "Bismi", category: "Grain", skuCode: "SSR10", skuName: "DOUBLE HORSE SUREKA STX 10 kg BAG", mrp: "739" },
+  { account: "Reliance", category: "Ingredients", skuCode: "fgvin01", skuName: "DOUBLE HORSE SYNTHETIC VINGAR 1 L PET", mrp: "49" },
+  { account: "Reliance", category: "Ingredients", skuCode: "FGVIN05", skuName: "DOUBLE HORSE SYNTHTIC VINEGAR 500 ML BTL", mrp: "32" },
+  { account: "Reliance", category: "Payasam", skuCode: "IPM20", skuName: "DOUBLE HORSE SADHAYA PALADA MIX200gPP", mrp: "85" },
+  { account: "Reliance", category: "Payasam", skuCode: "PLD30", skuName: "DOUBLE HORSE PALADA PAYASAM MIX 300G CBD", mrp: "85" },
+  { account: "Reliance", category: "Payasam", skuCode: "RMP30", skuName: "DOUBLE HORSE RICE PALADA MIX 300 g CBD", mrp: "85" },
+  { account: "Reliance", category: "Payasam", skuCode: "SEM03O", skuName: "DOUBLE HRS VERMICELLI KHEER MIX 300G CBD", mrp: "85" },
+  { account: "Reliance", category: "Payasam", skuCode: "TCP18", skuName: "Tender Coconut Payasam Mix 180g", mrp: "112" },
+  { account: "Reliance", category: "Payasam", skuCode: "IPP20", skuName: "Instant Parippu Pradhaman 200g", mrp: "115" },
+  { account: "Reliance", category: "Flours", skuCode: "IIN02", skuName: "Instant Idiyappam 200g (New)", mrp: "84" },
+  { account: "Reliance", category: "Flours", skuCode: "UPM25", skuName: "DOUBLE HORSE UPMA MIX 250 g PP", mrp: "40" },
+  { account: "Reliance", category: "Flours", skuCode: "AVP02", skuName: "DH  AVALOSEPODI 200GM", mrp: "61" },
+  { account: "Reliance", category: "Pickles", skuCode: "CM200", skuName: "DOUBLE HORSE CUT MANGO PICKLE 200 g PP", mrp: "56" },
+  { account: "Reliance", category: "Pickles", skuCode: "CM400", skuName: "DOUBLE HORSE CUT MANGO PICKLE 400 g BTL", mrp: "103" },
+  { account: "Reliance", category: "Pickles", skuCode: "CM500", skuName: "DOUBLEHORSE CUT MANGO PICKLE 500 g PP", mrp: "113" },
+  { account: "Reliance", category: "Pickles", skuCode: "CM900", skuName: "DOUBLE HORSE CUT MANGO PICKLE 900 g PET", mrp: "168" },
+  { account: "Reliance", category: "Pickles", skuCode: "DA200", skuName: "DOUBLE HORSE DATES PICKLE 200 g PP", mrp: "71" },
+  { account: "Reliance", category: "Pickles", skuCode: "DA400", skuName: "DOUBLE HORSE DATES PICKLE 400 g BTL", mrp: "140" },
+  { account: "Reliance", category: "Pickles", skuCode: "FP200", skuName: "DOUBLE HORSE FISH PICKLE 200 g PP", mrp: "108" },
+  { account: "Reliance", category: "Pickles", skuCode: "FP400", skuName: "DOUBLE HORSE FISH PICKLE 400 g BTL", mrp: "195" },
+  { account: "Reliance", category: "Pickles", skuCode: "GA200", skuName: "DOUBLE HORSE GARLIC PICKLE\u00a0 200 g PP", mrp: "61" },
+  { account: "Reliance", category: "Pickles", skuCode: "GA400", skuName: "DOUBLE HORSE GARLIC PICKLE 400 g BTL", mrp: "135" },
+  { account: "Reliance", category: "Pickles", skuCode: "GA500", skuName: "Garlic Pickle 500g", mrp: "140" },
+  { account: "Reliance", category: "Pickles", skuCode: "LM200", skuName: "DOUBLE HORSE LIME PICKLE 200 g PP", mrp: "56" },
+  { account: "Reliance", category: "Pickles", skuCode: "LM400", skuName: "DOUBL HORSE LIME PICKLE 400 g BTL", mrp: "112" },
+  { account: "Reliance", category: "Pickles", skuCode: "LM500", skuName: "DOUBLEHORSE LIME PICKLE 500 g PP", mrp: "113" },
+  { account: "Reliance", category: "Pickles", skuCode: "LM900", skuName: "DOUBLE HORSE LIME PICKLE 900 g PET", mrp: "187" },
+  { account: "Reliance", category: "Pickles", skuCode: "MM400", skuName: "DOUBLE HORSE KADU MANGO PICKLE 400 g BTL", mrp: "121" },
+  { account: "Reliance", category: "Pickles", skuCode: "PR200", skuName: "DOUBLE HORSE PRAWN PICKLE 200 g PP", mrp: "108" },
+  { account: "Reliance", category: "Pickles", skuCode: "PR400", skuName: "DOUBLE HORSE PRAWN PICKLE 400 g JAR", mrp: "225" },
+  { account: "Reliance", category: "Pickles", skuCode: "TM200", skuName: "DOUBLEHORSE TENDR MANGO PICKLE 200 g PP", mrp: "103" },
+  { account: "Reliance", category: "Pickles", skuCode: "TM400", skuName: "DOUBLE HORSE TNDR MANGO PICKLE 400 g BTL", mrp: "234" },
+  { account: "Reliance", category: "Pickles", skuCode: "TM500", skuName: "Tender Mango Pickle 500g", mrp: "253" },
+  { account: "Reliance", category: "Ingredients", skuCode: "JP500", skuName: "Jaggery Powder 500g", mrp: "85" },
+  { account: "Reliance", category: "Flours", skuCode: "ADA2M", skuName: "DOUBLE HORSE RICE PALADA 200 g PCH", mrp: "45" },
+  { account: "Reliance", category: "Flours", skuCode: "ARN05", skuName: "DOUBLE HORSE AVAL RED POHA 500 G PP", mrp: "79" },
+  { account: "Reliance", category: "Flours", skuCode: "ART05", skuName: "DOUBLE HORSE AVAL RED THICK 500 g PCH", mrp: "79" },
+  { account: "Reliance", category: "Flours", skuCode: "AWN05", skuName: "DOUBLE HORSE AVAL WHITE 500 g PP", mrp: "73" },
+  { account: "Reliance", category: "Masalas & Spices", skuCode: "CHM10", skuName: "DOUBLE HORSE CHICKEN MASALA 100 g PP", mrp: "55" },
+  { account: "Reliance", category: "Flours", skuCode: "CPP01", skuName: "DOUBLE HORSE CHEMBA RICE PODI 1 kg PP", mrp: "135" },
+  { account: "Reliance", category: "Flours", skuCode: "CPP05", skuName: "DOUBLE HORSE CHEMBA PUTTU PODI 500 g PP", mrp: "69" },
+  { account: "Reliance", category: "Masalas & Spices", skuCode: "EGM10", skuName: "DOUBLE HORSE EGG ROAST MASALA 100G PP", mrp: "48" },
+  { account: "Reliance", category: "Flours", skuCode: "ESY05", skuName: "DOUBLE HORSE EASY PALPAM PODI 500 g PP", mrp: "59" },
+  { account: "Reliance", category: "Masalas & Spices", skuCode: "FHM10", skuName: "DOUBLE HORSE FISH MASALA 100 g", mrp: "55" },
+  { account: "Reliance", category: "Flours", skuCode: "LVER40", skuName: "DOUBLE HORSE LONG VERMICELLI 400 g PP", mrp: "60" },
+  { account: "Reliance", category: "Porridge", skuCode: "MAB50", skuName: "DOUBLE HORSE BROKEN RICE SPR 500 g PP", mrp: "62" },
+  { account: "Reliance", category: "Porridge", skuCode: "MBEH5", skuName: "DOUBLE HORSE MATTA BROKEN RICE 500 g PP", mrp: "64" },
+  { account: "Reliance", category: "Masalas & Spices", skuCode: "MTM10", skuName: "DOUBLE HORSE MEAT MASALA 100 g PP", mrp: "55" },
+  { account: "Reliance", category: "Flours", skuCode: "RAVA1", skuName: "DOUBLE HORSE ROASTED RAWA 1 KG PP", mrp: "110" },
+  { account: "Reliance", category: "Flours", skuCode: "RAVA5", skuName: "DOUBLE HORSE ROSTED RAWA 500 g PP", mrp: "59" },
+  { account: "Reliance", category: "Flours", skuCode: "RGPU5", skuName: "DOUBLE HORSE RAGI PUTTU PODI 500 g PP", mrp: "73" },
+  { account: "Reliance", category: "Flours", skuCode: "RPOW1", skuName: "DOUBLE HORSE RICE POWDER APPAM 1 kg PP", mrp: "99" },
+  { account: "Reliance", category: "Flours", skuCode: "RPOW5", skuName: "DOUBLE HORSE RSTD WHT RICE PWDR 500 g PP", mrp: "52" },
+  { account: "Reliance", category: "Flours", skuCode: "RPOW5K", skuName: "DOUBLE HORSE APM IDIYAPPM FLOUR 5 kg BAG", mrp: "475" },
+  { account: "Reliance", category: "Masalas & Spices", skuCode: "SMP10", skuName: "DOUBLE HORSE SAMBAR POWDER 100 g PP", mrp: "51" },
+  { account: "Reliance", category: "Porridge", skuCode: "SWBH5", skuName: "DOUBLE HORSE SAMBA BROKEN WHEAT 500 g PP", mrp: "137" },
+  { account: "Reliance", category: "Porridge", skuCode: "SWF05", skuName: "DOUBLE HORSE SAMBA WHEAT RAWA 500 g PP", mrp: "140" },
+  { account: "Reliance", category: "Flours", skuCode: "VER20", skuName: "DH RO VERMECELLI 200 g PP", mrp: "29" },
+  { account: "Reliance", category: "Flours", skuCode: "WPP05", skuName: "DOUBLE HORSE SMBA WHT PUTU PODI 500 g PP", mrp: "75" },
+  { account: "Reliance", category: "Flours", skuCode: "WPU05", skuName: "DOUBLE HORSE RICE POWDER PUTTU 500 g PP", mrp: "55" },
+  { account: "Reliance", category: "Flours", skuCode: "WPUT1", skuName: "DOUBLE HORSE RICE POWDER PUTTU 1 kg PP", mrp: "99" },
+  { account: "Reliance", category: "Flours", skuCode: "WPUT5", skuName: "DOUBLE HORSE WHITE PUTTU PODI 5 kg BAG", mrp: "475" },
+  { account: "Reliance", category: "Grain", skuCode: "CHS05", skuName: "DOUBLE HORSE CHERUMANI STX 5KG", mrp: "348" },
+  { account: "Reliance", category: "Grain", skuCode: "CHS10", skuName: "DOUBLE HORSE CHERUMANI STX 10 kg BAG", mrp: "690" },
+  { account: "Reliance", category: "Grain", skuCode: "JYA05", skuName: "DOUBLE HORSE JAYA RICE STX 5 kg PP", mrp: "363" },
+  { account: "Reliance", category: "Grain", skuCode: "JYA10", skuName: "DOUBLE HORSE JAYA RICE STX 10 kg BAG", mrp: "719" },
+  { account: "Reliance", category: "Grain", skuCode: "JYP05", skuName: "DOUBLE HORSE VADI MATTA RICE 5 Kg BAG", mrp: "374" },
+  { account: "Reliance", category: "Grain", skuCode: "JYP10", skuName: "DOUBLE HORSE VADI MATTA RICE 10 Kg BAG", mrp: "750" },
+  { account: "Reliance", category: "Grain", skuCode: "RMP05", skuName: "DOUBLE HORSE PALAKKADAN MT RCE 5KG BAG", mrp: "387" },
+  { account: "Reliance", category: "Grain", skuCode: "RMP10", skuName: "DOUBLE HORSE PALAKKAM MATA RICE 10kg BAG", mrp: "768" },
+  { account: "Reliance", category: "Grain", skuCode: "SMR05", skuName: "DOUBLE HORSE SINGLE MATTA 5 kg PP", mrp: "348" },
+  { account: "Reliance", category: "Grain", skuCode: "SMR10", skuName: "DOUBLE HORSE SINGLE MATTA 10 kg BAG", mrp: "689" },
+  { account: "Reliance", category: "Grain", skuCode: "SSR10", skuName: "DOUBLE HORSE SUREKA STX 10 kg BAG", mrp: "739" },
+  { account: "Pothys", category: "Ingredients", skuCode: "FGVIN05", skuName: "DOUBLE HORSE SYNTHETIC VINEGAR 500ML", mrp: "32" },
+  { account: "Pothys", category: "Ingredients", skuCode: "FGVIN01", skuName: "DOUBLE HORSE SYNTHETIC VINEGER 1LTR", mrp: "49" },
+  { account: "Pothys", category: "Payasam", skuCode: "RMP30", skuName: "DOUBLE HORSE RICE PALADA PAYASAM 300GMS", mrp: "85" },
+  { account: "Pothys", category: "Payasam", skuCode: "IPM20", skuName: "DH INSTANT SADYA PALADA MIX 200G", mrp: "85" },
+  { account: "Pothys", category: "Payasam", skuCode: "PLD30", skuName: "DOUBLE HORSE PALADAMIX 300GM", mrp: "85" },
+  { account: "Pothys", category: "Payasam", skuCode: "SEM03O", skuName: "DOUBLE HORSE VERMCLI KHR MX300", mrp: "85" },
+  { account: "Pothys", category: "Payasam", skuCode: "IPP20", skuName: "DOUBLE HORSE INSTANT PARIPPU PRADHAMAN 200G", mrp: "115" },
+  { account: "Pothys", category: "Payasam", skuCode: "TCP18", skuName: "Tender Coconut Payasam Mix 180g", mrp: "112" },
+  { account: "Pothys", category: "Flours", skuCode: "IIN10", skuName: "DOUBLE HORSE INST IDYPM 1K", mrp: "357" },
+  { account: "Pothys", category: "Flours", skuCode: "IIN02", skuName: "DOUBLE HORSE INST IDIYAPPM 200", mrp: "84" },
+  { account: "Pothys", category: "Flours", skuCode: "UPM25", skuName: "DOUBLE HORSE INSTANT UPMA 250G", mrp: "40" },
+  { account: "Pothys", category: "Flours", skuCode: "RSE02", skuName: "DOUBLE HORSE RICE SEVAI 200G", mrp: "62" },
+  { account: "Pothys", category: "Ingredients", skuCode: "CNF15", skuName: "DOUBLE HORSE CORNFLOUR 150GM", mrp: "45" },
+  { account: "Pothys", category: "Ingredients", skuCode: "CNF35", skuName: "Corn Flour 350g", mrp: "87" },
+  { account: "Pothys", category: "Pickles", skuCode: "CM900", skuName: "DOUBLE HORSE CUT MANGO PCKLE 900G ", mrp: "168" },
+  { account: "Pothys", category: "Pickles", skuCode: "CM500", skuName: "DOUBLE HORSE CUT MANGO PK500", mrp: "113" },
+  { account: "Pothys", category: "Pickles", skuCode: "CM400", skuName: "DOUBLE HORSE CUT MANGO PICKLE 400GMS JAR", mrp: "103" },
+  { account: "Pothys", category: "Pickles", skuCode: "CM150", skuName: "DOUBLE HORSE CUT MANGO PICKLE 150GMS", mrp: "56" },
+  { account: "Pothys", category: "Pickles", skuCode: "CM200", skuName: "DOUBLE HORSE CUT MANGO PICKLE 200GMS POUCH", mrp: "56" },
+  { account: "Pothys", category: "Pickles", skuCode: "CM100", skuName: "DOUBLE HORSE CUT MANGO PICKLE 100GMS POUCH", mrp: "28" },
+  { account: "Pothys", category: "Pickles", skuCode: "DA150", skuName: "DOUBLE HORSE DATES PICKLE 150GMS", mrp: "71" },
+  { account: "Pothys", category: "Pickles", skuCode: "DA400", skuName: "DOUBLE HORSE DATES PICKLE 400GMS", mrp: "140" },
+  { account: "Pothys", category: "Pickles", skuCode: "DA200", skuName: "DOUBLE HORSE DATES PKL 200GM", mrp: "71" },
+  { account: "Pothys", category: "Pickles", skuCode: "FP500", skuName: "DOUBLE HORSE FISH PICKLE500G", mrp: "215" },
+  { account: "Pothys", category: "Pickles", skuCode: "FP400", skuName: "DOUBLE HORSE FISH PICKLE 400GMS", mrp: "195" },
+  { account: "Pothys", category: "Pickles", skuCode: "FP150", skuName: "DOUBLE HORSE FISH PICKLE 150GMS", mrp: "93" },
+  { account: "Pothys", category: "Pickles", skuCode: "FP200", skuName: "DOUBLE HORSE FISH PICKLE 200GMS POUCH", mrp: "108" },
+  { account: "Pothys", category: "Pickles", skuCode: "GA500", skuName: "DOUBLE HORSE GARLIC PICKLE 500", mrp: "140" },
+  { account: "Pothys", category: "Pickles", skuCode: "GA400", skuName: "DOUBLE HORSE GARLIC PICKLE 400GMS", mrp: "135" },
+  { account: "Pothys", category: "Pickles", skuCode: "GA150", skuName: "DOUBLE HORSE GARLIC PICKLE 150GMS", mrp: "62" },
+  { account: "Pothys", category: "Pickles", skuCode: "GA200", skuName: "DOUBLE HORSE GARLIC PICKLE 200GMS POUCH", mrp: "61" },
+  { account: "Pothys", category: "Pickles", skuCode: "GI150", skuName: "DOUBLE HORSE GINGER PICKLE 150GM", mrp: "65" },
+  { account: "Pothys", category: "Ingredients", skuCode: "GNGRC15", skuName: "DOUBLE HORSE COFFEE INSTANT GINGER 150G", mrp: "93" },
+  { account: "Pothys", category: "Pickles", skuCode: "GI400", skuName: "DOUBLE HORSE GINGER PICKLE 400GMS", mrp: "141" },
+  { account: "Pothys", category: "Pickles", skuCode: "HS400", skuName: "DOUBLE HORSE H&S LIM PKL 400G", mrp: "131" },
+  { account: "Pothys", category: "Pickles", skuCode: "MM400", skuName: "DOUBLE HORSE KDKU MANGO PL400", mrp: "121" },
+  { account: "Pothys", category: "Pickles", skuCode: "LM400", skuName: "DOUBLE HORSE LIME PICKLE 400GMS", mrp: "112" },
+  { account: "Pothys", category: "Pickles", skuCode: "LM150", skuName: "DOUBLE HORSE LIME PICKLE 150GMS", mrp: "61" },
+  { account: "Pothys", category: "Pickles", skuCode: "LM200", skuName: "DOUBLE HORSE LIME PICKLE 200GMS POUCH", mrp: "56" },
+  { account: "Pothys", category: "Pickles", skuCode: "LM100", skuName: "DOUBLE HORSE LIME PKL 100GM", mrp: "28" },
+  { account: "Pothys", category: "Pickles", skuCode: "LM500", skuName: "DOUBLE HORSE LIME PICKL500G", mrp: "113" },
+  { account: "Pothys", category: "Pickles", skuCode: "LM900", skuName: "DOUBLE HORSE LIME PCKLE 900G", mrp: "187" },
+  { account: "Pothys", category: "Ingredients", skuCode: "MCR05", skuName: "DOUBLE HORSE MACARONI 200GMS", mrp: "34" },
+  { account: "Pothys", category: "Ingredients", skuCode: "MCR04", skuName: "DOUBLE HORSE MACARONI 400GMS", mrp: "62" },
+  { account: "Pothys", category: "Pickles", skuCode: "PR500", skuName: "DOUBLE HORSE PRAWN PKL 500G", mrp: "253" },
+  { account: "Pothys", category: "Pickles", skuCode: "PR400", skuName: "DOUBLE HORSE PRAWN PICKLE 400GMS", mrp: "225" },
+  { account: "Pothys", category: "Pickles", skuCode: "PR150", skuName: "DOUBLE HORSE PRAWN PICKLE 150GMS", mrp: "103" },
+  { account: "Pothys", category: "Pickles", skuCode: "PR200", skuName: "DOUBLE HORSE PRAWN PICKLE 200GMS POUCH", mrp: "108" },
+  { account: "Pothys", category: "Ingredients", skuCode: "SCY03", skuName: "DOUBLE HORSE SOYA CHUNKS 200GMS", mrp: "47" },
+  { account: "Pothys", category: "Ingredients", skuCode: "SCYCN02", skuName: "DOUBLE HORSE SOYA CHUNKS NANO 200GMS", mrp: "49" },
+  { account: "Pothys", category: "Pickles", skuCode: "TM150", skuName: "DOUBLE HORSE TENDER MANGO PICKLE 150GMS", mrp: "103" },
+  { account: "Pothys", category: "Pickles", skuCode: "TM500", skuName: "DOUBLE HORSE TENDR MANG PK500", mrp: "253" },
+  { account: "Pothys", category: "Pickles", skuCode: "TM400", skuName: "DOUBLE HORSE TENDER MANGO PICKLE 400GMS", mrp: "234" },
+  { account: "Pothys", category: "Pickles", skuCode: "TM200", skuName: "DOUBLE HORSE TENDER MANGO PICKLE 200GMS POUCH", mrp: "103" },
+  { account: "Pothys", category: "Masalas & Spices", skuCode: "GAPE2", skuName: "DOUBLE HORSE GARLIC PASTE 200GMS", mrp: "65" },
+  { account: "Pothys", category: "Masalas & Spices", skuCode: "GIPE2", skuName: "DOUBLE HORSE GINGER PASTE 200GMS", mrp: "65" },
+  { account: "Pothys", category: "Masalas & Spices", skuCode: "GGPE2", skuName: "DOUBLE HORSE GINGER GARLIC PASTE 200GMS", mrp: "65" },
+  { account: "Pothys", category: "Flours", skuCode: "AVP02", skuName: "DOUBLE HORSE AVALOSE PODI 200G", mrp: "61" },
+  { account: "Pothys", category: "Flours", skuCode: "IP1KG", skuName: "DOUBLE HORSE EASY IDIAPPAM POWDER 1KG+200G", mrp: "112" },
+  { account: "Pothys", category: "Ingredients", skuCode: "ASFTP05", skuName: "DOUBLE HORSE AFFOETIDA POWDER 50G", mrp: "89" },
+  { account: "Pothys", category: "Flours", skuCode: "ART05", skuName: "DOUBLE HORSE AVAL RED THICK 500GMS", mrp: "79" },
+  { account: "Pothys", category: "Flours", skuCode: "ARN05", skuName: "DOUBLE HORSE AVAL RED 500GMS", mrp: "79" },
+  { account: "Pothys", category: "Flours", skuCode: "AWN05", skuName: "DOUBLE HORSE AVAL WHITE 500GMS", mrp: "73" },
+  { account: "Pothys", category: "Porridge", skuCode: "WBO05", skuName: "DOUBLE HORSE BENSI WHEAT BROKEN 500 G", mrp: "59" },
+  { account: "Pothys", category: "Masalas & Spices", skuCode: "BMP10", skuName: "DOUBLE HORSE BRIYANI MASALA 100GMS", mrp: "60" },
+  { account: "Pothys", category: "Flours", skuCode: "CATA1", skuName: "DOUBLE HORSE CHAKY FRSH ATTA1K", mrp: "79" },
+  { account: "Pothys", category: "Flours", skuCode: "CATA2", skuName: "DOUBLE HORSE CHAKKI FRESH ATTA 2KG", mrp: "155" },
+  { account: "Pothys", category: "Flours", skuCode: "CATA5", skuName: "DOUBLE HORSE CHAKKY ATTA 5KG", mrp: "379" },
+  { account: "Pothys", category: "Grain", skuCode: "CMB01", skuName: "DOUBLE HORSE CHEFMATE 1KG RICE", mrp: "249" },
+  { account: "Pothys", category: "Flours", skuCode: "CPP01", skuName: "DOUBLE HORSE CHEMBA PUTTU PODI 1K", mrp: "135" },
+  { account: "Pothys", category: "Flours", skuCode: "CPP05", skuName: "DOUBLE HORSE FLOUR CHEMPA PUTTU PODI 500GMS", mrp: "69" },
+  { account: "Pothys", category: "Masalas & Spices", skuCode: "CHM10", skuName: "DOUBLE HORSE CHICKEN MASALA 100GMS", mrp: "55" },
+  { account: "Pothys", category: "Masalas & Spices", skuCode: "CIP10", skuName: "DOUBLE HORSE CHILLI POWDER 100GMS", mrp: "44" },
+  { account: "Pothys", category: "Masalas & Spices", skuCode: "CHP01", skuName: "DOUBLE HORSE CHILLI POWDER 1KG", mrp: "423" },
+  { account: "Pothys", category: "Masalas & Spices", skuCode: "CHP25", skuName: "DOUBLE HORSE CHILLI POWDER 250G", mrp: "109" },
+  { account: "Pothys", category: "Masalas & Spices", skuCode: "CHP50", skuName: "DOUBLE HORSE CHILLI POWDER 500G", mrp: "214" },
+  { account: "Pothys", category: "Masalas & Spices", skuCode: "COP10", skuName: "DOUBLE HORSE CORIANDER PDR 100G", mrp: "33" },
+  { account: "Pothys", category: "Masalas & Spices", skuCode: "COP25", skuName: "DOUBLE HORSE CORIER POW 250G", mrp: "81" },
+  { account: "Pothys", category: "Masalas & Spices", skuCode: "COP50", skuName: "DOUBLE HORSE CORINDR PDR 500G", mrp: "159" },
+  { account: "Pothys", category: "Masalas & Spices", skuCode: "COP01", skuName: "DOUBLE HORSE CRNDR MSLSA 1K", mrp: "312" },
+  { account: "Pothys", category: "Flours", skuCode: "CPU05", skuName: "DOUBLE HORSE FLOUR CORN PUTTU 500GMS", mrp: "69" },
+  { account: "Pothys", category: "Flours", skuCode: "RWRFR02", skuName: "DOUBLE HORSE RST WHIT RCFLR500", mrp: "52" },
+  { account: "Pothys", category: "Flours", skuCode: "RWRFR01", skuName: "DOUBLE HORSE RST WHIT RCFLR 1K", mrp: "99" },
+  { account: "Pothys", category: "Flours", skuCode: "ESYP1", skuName: "DOUBLE HORSE ESY PALPM MIX 1K", mrp: "109" },
+  { account: "Pothys", category: "Flours", skuCode: "ESY05", skuName: "DOUBLE HORSE EASY PALAPPAM MIX 500GMS", mrp: "59" },
+  { account: "Pothys", category: "Masalas & Spices", skuCode: "EGM10", skuName: "DOUBLE HORSE EGG MASALA", mrp: "48" },
+  { account: "Pothys", category: "Masalas & Spices", skuCode: "FHM10", skuName: "DOUBLE HORSE FISH MASALA 100GMS", mrp: "55" },
+  { account: "Pothys", category: "Flours", skuCode: "RAVA1", skuName: "DOUBLE HORSE ROSTD RAVA 1K", mrp: "110" },
+  { account: "Pothys", category: "Flours", skuCode: "RAVA5", skuName: "DOUBLE HORSE RAVA ROASTED 500GMS", mrp: "59" },
+  { account: "Pothys", category: "Masalas & Spices", skuCode: "GMA50", skuName: "DOUBLE HORSE GARAM MASALA 50GM", mrp: "55" },
+  { account: "Pothys", category: "Flours", skuCode: "IP500", skuName: "DOUBLE HORSE IDIYAPPAM POWDER 500GM", mrp: "59" },
+  { account: "Pothys", category: "Ingredients", skuCode: "JP400", skuName: "DOUBLE HORSE JAGGERY PWDR 400G", mrp: "69" },
+  { account: "Pothys", category: "Grain", skuCode: "MCB01", skuName: "DOUBLE HORSE JEERAKASALA RICE 1 KG ", mrp: "275" },
+  { account: "Pothys", category: "Grain", skuCode: "MCB05", skuName: "JEERAKASHALA RICE 5KG", mrp: "1299" },
+  { account: "Pothys", category: "Masalas & Spices", skuCode: "KC100", skuName: "DOUBLE HORSE KASHMIRI CHILLI POWDER 100GMS", mrp: "68" },
+  { account: "Pothys", category: "Masalas & Spices", skuCode: "KC250", skuName: "DOUBLE HORSE KASHMIRI CHILLI PWDR 250G", mrp: "169" },
+  { account: "Pothys", category: "Masalas & Spices", skuCode: "KAC500", skuName: "DOUBLE HORSE KASHMIRI CHILLI PWDR 500G", mrp: "333" },
+  { account: "Pothys", category: "Flours", skuCode: "LVER40", skuName: "DOUBLE HORSE LONG VERMICELI400", mrp: "60" },
+  { account: "Pothys", category: "Porridge", skuCode: "MBE01", skuName: "DOUBLE HORSE MTA BRKN RC 1KG", mrp: "119" },
+  { account: "Pothys", category: "Porridge", skuCode: "MBEH5", skuName: "DOUBLE HORSE MATTA BROKEN RICE 500GMS", mrp: "64" },
+  { account: "Pothys", category: "Porridge", skuCode: "BRMB5", skuName: "DOUBLE HORSE Bran\u00a0Rich Matta Broken Rice 500g", mrp: "51" },
+  { account: "Pothys", category: "Masalas & Spices", skuCode: "MTM10", skuName: "DOUBLE HORSE MEAT MASALA 100GMS", mrp: "55" },
+  { account: "Pothys", category: "Flours", skuCode: "PTRI1", skuName: "DOUBLE HORSE ROSTD PTRI FLR 1K", mrp: "109" },
+  { account: "Pothys", category: "Masalas & Spices", skuCode: "PPP10", skuName: "DOUBLE HORSE PEPPER POWDER 100G", mrp: "165" },
+  { account: "Pothys", category: "Masalas & Spices", skuCode: "PP50", skuName: "DOUBLE HORSE PEPPER PWDR 50GM", mrp: "85" },
+  { account: "Pothys", category: "Masalas & Spices", skuCode: "PPW10", skuName: "DOUBLE HORSE PICKLE PDR 100G", mrp: "54" },
+  { account: "Pothys", category: "Flours", skuCode: "WPUT5", skuName: "DOUBLE HORSE WHITE PUTTUPODI 5", mrp: "475" },
+  { account: "Pothys", category: "Flours", skuCode: "RGN1K", skuName: "DOUBLE HORSE RAGI NICE PWDR 1KG", mrp: "132" },
+  { account: "Pothys", category: "Flours", skuCode: "RGIP5", skuName: "DOUBLE HORSE FLOUR ROASTED RAGI 500KG", mrp: "72" },
+  { account: "Pothys", category: "Flours", skuCode: "RGPU5", skuName: "DOUBLE HORSE FLOUR RAGI PUTTU 500GMS", mrp: "73" },
+  { account: "Pothys", category: "Masalas & Spices", skuCode: "RMM10", skuName: "DOUBLE HORSE RASAM PWDR 100G", mrp: "58" },
+  { account: "Pothys", category: "Flours", skuCode: "ADA2M", skuName: "DOUBLE HORSE RICE PALADA 200GMS", mrp: "45" },
+  { account: "Pothys", category: "Flours", skuCode: "RPOW5K", skuName: "DOUBLE HORSE APPAM /PATHIRI PWDR 5K", mrp: "475" },
+  { account: "Pothys", category: "Flours", skuCode: "VER40", skuName: "DOUBLE HORSE ROASTED VERMICELLI 400GMS", mrp: "59" },
+  { account: "Pothys", category: "Flours", skuCode: "VER20", skuName: "DOUBLE HORSE ROASTED VERMICELLI 200GMS", mrp: "29" },
+  { account: "Pothys", category: "Flours", skuCode: "VER80", skuName: "Roasted Vermicelli 800g", mrp: "117" },
+  { account: "Pothys", category: "Flours", skuCode: "PPO05", skuName: "DOUBLE HORSE ROASTED PATHIRI PWDR 500GM", mrp: "59" },
+  { account: "Pothys", category: "Porridge", skuCode: "SWF05", skuName: "DOUBLE HORSE RAVA SAMBA WHEAT 500GMS", mrp: "119" },
+  { account: "Pothys", category: "Masalas & Spices", skuCode: "SMP10", skuName: "DOUBLE HORESE POWDER SAMBAR MASALA 100G*", mrp: "51" },
+  { account: "Pothys", category: "Masalas & Spices", skuCode: "TUP10", skuName: "DOUBLE HORSE TURMERIC POWDER 100GMS", mrp: "39" },
+  { account: "Pothys", category: "Masalas & Spices", skuCode: "TUP25", skuName: "DOUBLE HORSE TRMRI PDR 250G", mrp: "99" },
+  { account: "Pothys", category: "Masalas & Spices", skuCode: "VGM10", skuName: "DOUBLE HORSE VEGETABLE MASALA 100GMS", mrp: "47" },
+  { account: "Pothys", category: "Porridge", skuCode: "SWBO1", skuName: "DOUBLE HORSE SAMBA BRKN WET 1K", mrp: "255" },
+  { account: "Pothys", category: "Porridge", skuCode: "SWBH5", skuName: "DOUBLE HORSE FLOUR SAMBA BROKEN WHEAT 500GMS", mrp: "137" },
+  { account: "Pothys", category: "Porridge", skuCode: "WBF05", skuName: "DOUBLE HORSE FINE BROKEN WHEAT RAVA 500 G", mrp: "59" },
+  { account: "Pothys", category: "Flours", skuCode: "WPP05", skuName: "Double Horse Wheat Put 500gm", mrp: "75" },
+  { account: "Pothys", category: "Flours", skuCode: "AWT04", skuName: "DOUBLE HORSE WHITE AVAL THICK 400GM", mrp: "59" },
+  { account: "Pothys", category: "Flours", skuCode: "WPUT1", skuName: "DOUBLE HORSE WHIT PTPD 1KG", mrp: "99" },
+  { account: "Pothys", category: "Flours", skuCode: "WPU05", skuName: "DOUBLE HORSE WHIT PTPD 500G", mrp: "55" },
+  { account: "Pothys", category: "Flours", skuCode: "RPOW1", skuName: "DOUBLE HORSE FLOUR APPAM IDIYAPPAM PODI 1KG", mrp: "99" },
+  { account: "Pothys", category: "Flours", skuCode: "RPOW5", skuName: "DOUBLE HORSE FLOUR APPAM PATHRI RICE 500GMS", mrp: "52" },
+  { account: "Pothys", category: "Flours", skuCode: "FGRAD02", skuName: "DOUBLE HORSE RIBBON ADA 200G", mrp: "54" },
+  { account: "Pothys", category: "Flours", skuCode: "UVR15", skuName: "DOUBLE HORSE UNROASTED VERMICELLI 150 GM", mrp: "29" },
+  { account: "Pothys", category: "Flours", skuCode: "IDM05", skuName: "DOUBLE HORSE 1HR IDLI / DOSA MIX 500G ", mrp: "85" },
+  { account: "Pothys", category: "Flours", skuCode: "MA500", skuName: "DOUBLE HORSE MAIDA 500 GM", mrp: "46" },
+  { account: "Pothys", category: "Flours", skuCode: "MAI01", skuName: "DOUBLE HORSE MAIDA 1 KG", mrp: "89" },
+  { account: "Pothys", category: "Ingredients", skuCode: "PAD01", skuName: "DOUBLE HORSE PAPPADAM 100GM", mrp: "45" },
+  { account: "Pothys", category: "Ingredients", skuCode: "TMPE5", skuName: "DOUBLE HORSE INDIAN TAMARND 500G0", mrp: "149" },
+  { account: "Pothys", category: "Ingredients", skuCode: "TMPE2P", skuName: "DOUBLE HORSE TAMARIND 200", mrp: "60" },
+  { account: "Pothys", category: "Grain", skuCode: "CHS05", skuName: "DOUBLE HORSE SORT CHERUMANI 5K", mrp: "348" },
+  { account: "Pothys", category: "Grain", skuCode: "CHS10", skuName: "DOUBLE HORSE SORT CHERUMANI 10KG", mrp: "690" },
+  { account: "Pothys", category: "Grain", skuCode: "JYA05", skuName: "DOUBLE HORSE SORT JAYA RICE 5K", mrp: "363" },
+  { account: "Pothys", category: "Grain", skuCode: "JYA10", skuName: "DOUBLE HORSE SORT JAYA RIC10KG", mrp: "719" },
+  { account: "Pothys", category: "Grain", skuCode: "JYP05", skuName: "DH JYOTHI VADI MATTA 5KG", mrp: "374" },
+  { account: "Pothys", category: "Grain", skuCode: "JYP10", skuName: "DH JYOTHI VADI MATTA 10KG", mrp: "750" },
+  { account: "Pothys", category: "Grain", skuCode: "RMP05", skuName: "DOUBLE HORSE UNDAMATTA 5KG", mrp: "387" },
+  { account: "Pothys", category: "Grain", skuCode: "RMP10", skuName: "DOUBLE HORSE SORT MATA SHT R10", mrp: "768" },
+  { account: "Pothys", category: "Grain", skuCode: "SMR05", skuName: "DOUBLE HORSE SORT MATA SIN 5K", mrp: "348" },
+  { account: "Pothys", category: "Grain", skuCode: "SMR10", skuName: "DOUBLE HORSE SINGLE MATTA 10K", mrp: "689" },
+  { account: "Pothys", category: "Grain", skuCode: "SSR05", skuName: "DOUBLE HORSE SORT SUREKA R5K", mrp: "373" },
+  { account: "Pothys", category: "Grain", skuCode: "SSR10", skuName: "DOUBLE HORSE SORT SUREKA R10K", mrp: "739" },
+  { account: "Pothys", category: "Grain", skuCode: "PRS05", skuName: "DOUBLE HORSE THANJAVOOR PONNI 5KG", mrp: "471" },
+  { account: "Pothys", category: "Grain", skuCode: "PRS10", skuName: "DOUBLE HORSE THANJAVOOR PONNI 10KG", mrp: "935" },
+  { account: "Nesto", category: "Ingredients", skuCode: "FGVIN05", skuName: "Double Horse Synthetic Vinegar 500Ml", mrp: "32" },
+  { account: "Nesto", category: "Ingredients", skuCode: "fgvin01", skuName: "Double Horse Vinegar 1Lt", mrp: "49" },
+  { account: "Nesto", category: "Payasam", skuCode: "IPM20", skuName: "Double Horse Instant Palada Mix\u00a0 200 Gm", mrp: "85" },
+  { account: "Nesto", category: "Payasam", skuCode: "IPP20", skuName: "Double Horse Instnt Parippu Prdhmn 200Gm", mrp: "115" },
+  { account: "Nesto", category: "Payasam", skuCode: "PLD30", skuName: "Double Horse Palada Payasam Mix 300Gm", mrp: "85" },
+  { account: "Nesto", category: "Payasam", skuCode: "RMP30", skuName: "Double Horse Rice Palada Payasam 200Gm", mrp: "85" },
+  { account: "Nesto", category: "Payasam", skuCode: "SEM03O", skuName: "Double Horse Semiya Payasam Mix 300gm", mrp: "85" },
+  { account: "Nesto", category: "Payasam", skuCode: "TCP18", skuName: "Tender Coconut Payasam Mix 180g", mrp: "112" },
+  { account: "Nesto", category: "Flours", skuCode: "IIN02", skuName: "Double Horse Instant Idiyappam 200gm", mrp: "84" },
+  { account: "Nesto", category: "Flours", skuCode: "UPM25", skuName: "INSTANT UPPUMA 250 g", mrp: "40" },
+  { account: "Nesto", category: "Flours", skuCode: "RSE02", skuName: "RICE SEVAI 200 g", mrp: "62" },
+  { account: "Nesto", category: "Flours", skuCode: "AVP02", skuName: "Avalose Podi 200g", mrp: "61" },
+  { account: "Nesto", category: "Ingredients", skuCode: "CNF35", skuName: "Corn Flour 350g", mrp: "87" },
+  { account: "Nesto", category: "Ingredients", skuCode: "GNGRC15", skuName: "Double Horse Chukku Kappi 150Gm", mrp: "93" },
+  { account: "Nesto", category: "Ingredients", skuCode: "CNF15", skuName: "Double Horse Corn Flour 150gm", mrp: "45" },
+  { account: "Nesto", category: "Pickles", skuCode: "CM900", skuName: "Double Horse Cut Mango Pickle 900gm", mrp: "168" },
+  { account: "Nesto", category: "Pickles", skuCode: "CM500", skuName: "Double Horse Cutmango Pickle 500gm", mrp: "113" },
+  { account: "Nesto", category: "Pickles", skuCode: "DA150", skuName: "Double Horse Dates Pickle 150gm", mrp: "71" },
+  { account: "Nesto", category: "Pickles", skuCode: "DA200", skuName: "Double Horse Dates Pickle 200gm", mrp: "71" },
+  { account: "Nesto", category: "Pickles", skuCode: "DA400", skuName: "Double Horse Dates Pickle 400Gm", mrp: "140" },
+  { account: "Nesto", category: "Pickles", skuCode: "FP150", skuName: "Double Horse Fish Pickle 150gm", mrp: "93" },
+  { account: "Nesto", category: "Pickles", skuCode: "FP200", skuName: "Double Horse Fish Pickle 200gm", mrp: "108" },
+  { account: "Nesto", category: "Pickles", skuCode: "FP400", skuName: "Fish  Pickle 400g", mrp: "195" },
+  { account: "Nesto", category: "Pickles", skuCode: "FP500", skuName: "Double Horse Fish Pickle 500gm", mrp: "215" },
+  { account: "Nesto", category: "Masalas & Spices", skuCode: "GAPE2", skuName: "Double Horse Garlic Paste 200Gm", mrp: "65" },
+  { account: "Nesto", category: "Pickles", skuCode: "GA150", skuName: "Double Horse Garlic Pickle 150gm", mrp: "62" },
+  { account: "Nesto", category: "Pickles", skuCode: "GA200", skuName: "Double Horse Garlic Pickle 200gm", mrp: "61" },
+  { account: "Nesto", category: "Pickles", skuCode: "GA500", skuName: "Double Horse Garlic Pickle 500gm", mrp: "140" },
+  { account: "Nesto", category: "Masalas & Spices", skuCode: "GGPE2", skuName: "Double Horse Ginger Garlic Paste 200Gm", mrp: "65" },
+  { account: "Nesto", category: "Masalas & Spices", skuCode: "GIPE2", skuName: "Double Horse Ginger Paste 200Gm", mrp: "65" },
+  { account: "Nesto", category: "Pickles", skuCode: "GI150", skuName: "Double Horse Ginger Pickle 150gm", mrp: "65" },
+  { account: "Nesto", category: "Pickles", skuCode: "HS400", skuName: "Double Horse H&S Lime Dates Pickle 400Gm", mrp: "131" },
+  { account: "Nesto", category: "Pickles", skuCode: "LM100", skuName: "Double Horse Lime Pickle 100gm", mrp: "28" },
+  { account: "Nesto", category: "Pickles", skuCode: "LM150", skuName: "Double Horse Lime Pickle 150gm", mrp: "61" },
+  { account: "Nesto", category: "Pickles", skuCode: "LM200", skuName: "Double Horse Lime Pickle 200gm", mrp: "56" },
+  { account: "Nesto", category: "Pickles", skuCode: "LM500", skuName: "Double Horse Lime Pickle 500gm", mrp: "113" },
+  { account: "Nesto", category: "Pickles", skuCode: "LM900", skuName: "Double Horse Lime Pickle 900gm", mrp: "187" },
+  { account: "Nesto", category: "Ingredients", skuCode: "MCR05", skuName: "Double Horse Macroni 200gm", mrp: "34" },
+  { account: "Nesto", category: "Ingredients", skuCode: "MCR04", skuName: "Double Horse Macroni 400gm", mrp: "62" },
+  { account: "Nesto", category: "Pickles", skuCode: "CM100", skuName: "Double Horse Mango Pickle 100gm", mrp: "28" },
+  { account: "Nesto", category: "Pickles", skuCode: "CM150", skuName: "Double Horse Mango Pickle 150gm", mrp: "56" },
+  { account: "Nesto", category: "Pickles", skuCode: "CM200", skuName: "Double Horse Mango Pickle 200gm", mrp: "56" },
+  { account: "Nesto", category: "Pickles", skuCode: "GA400", skuName: "Double Horse Pickle Garlic 400Gm", mrp: "135" },
+  { account: "Nesto", category: "Pickles", skuCode: "GI400", skuName: "Double Horse Pickle Ginger 400Gm", mrp: "141" },
+  { account: "Nesto", category: "Pickles", skuCode: "MM400", skuName: "Double Horse Pickle Kadu Mango 400Gm", mrp: "121" },
+  { account: "Nesto", category: "Pickles", skuCode: "LM400", skuName: "Double Horse Pickle Lime 400Gm", mrp: "112" },
+  { account: "Nesto", category: "Pickles", skuCode: "CM400", skuName: "Double Horse Pickle Mango 400Gm", mrp: "103" },
+  { account: "Nesto", category: "Pickles", skuCode: "TM400", skuName: "Double Horse Pickle Tndr Mango 400Gm", mrp: "234" },
+  { account: "Nesto", category: "Pickles", skuCode: "PR150", skuName: "Double Horse Prawn Pickle 150gm", mrp: "103" },
+  { account: "Nesto", category: "Pickles", skuCode: "PR200", skuName: "Double Horse Prawn Pickle 200gm", mrp: "108" },
+  { account: "Nesto", category: "Pickles", skuCode: "PR400", skuName: "Prawn Pickle 400g", mrp: "225" },
+  { account: "Nesto", category: "Pickles", skuCode: "PR500", skuName: "Double Horse Prawn Pickle 500gm", mrp: "253" },
+  { account: "Nesto", category: "Ingredients", skuCode: "SCY03", skuName: "Double Horse Soya Chunks 200gm", mrp: "47" },
+  { account: "Nesto", category: "Ingredients", skuCode: "SCYCN02", skuName: "Double Horse Soya Chunks Nano 200gm", mrp: "49" },
+  { account: "Nesto", category: "Pickles", skuCode: "TM150", skuName: "Double Horse Tender Mango Pickle 150gm", mrp: "103" },
+  { account: "Nesto", category: "Pickles", skuCode: "TM200", skuName: "Double Horse Tender Mango Pickle 200gm", mrp: "103" },
+  { account: "Nesto", category: "Pickles", skuCode: "TM500", skuName: "Double Horse Tender Mango Pickle 500gm", mrp: "253" },
+  { account: "Nesto", category: "Ingredients", skuCode: "MCR08", skuName: "Macaroni 800g", mrp: "108" },
+  { account: "Nesto", category: "Grain", skuCode: "CMB01", skuName: "CHEF MATE 1Kg", mrp: "249" },
+  { account: "Nesto", category: "Flours", skuCode: "IP500", skuName: "DH 6Minute Idiyappam Powder 500gm", mrp: "59" },
+  { account: "Nesto", category: "Flours", skuCode: "RPOW5", skuName: "DH Appam Idiapam Pathiri RiceFlour 500gm", mrp: "52" },
+  { account: "Nesto", category: "Flours", skuCode: "RPOW5K", skuName: "DH Appam Idiyappam Rice Flour 5kg", mrp: "475" },
+  { account: "Nesto", category: "Porridge", skuCode: "SWF05", skuName: "DH Samba Wheat Broken Fine 500gm", mrp: "140" },
+  { account: "Nesto", category: "Flours", skuCode: "IDM05", skuName: "Double Horse 1Hr Idli Dosa Mix 500Gm", mrp: "85" },
+  { account: "Nesto", category: "Ingredients", skuCode: "ASFTP05", skuName: "Double Horse Asfoetida Powder 50gm", mrp: "89" },
+  { account: "Nesto", category: "Masalas & Spices", skuCode: "BMP10", skuName: "Double Horse Biryani Masala 100gm", mrp: "60" },
+  { account: "Nesto", category: "Porridge", skuCode: "MBE01", skuName: "Double Horse Broken Matta Rice 1Kg", mrp: "119" },
+  { account: "Nesto", category: "Porridge", skuCode: "MBEH5", skuName: "Double Horse Broken Matta Rice 500Gm", mrp: "64" },
+  { account: "Nesto", category: "Porridge", skuCode: "BRMB5", skuName: "Bran\u00a0Rich Matta Broken Rice 500g", mrp: "51" },
+  { account: "Nesto", category: "Porridge", skuCode: "MAB50", skuName: "Double Horse Broken Rice Super 500gm", mrp: "62" },
+  { account: "Nesto", category: "Porridge", skuCode: "WBO05", skuName: "Double Horse Broken Wheat 500gm", mrp: "59" },
+  { account: "Nesto", category: "Flours", skuCode: "CPP01", skuName: "Double Horse Chemba Puttu Podi 1Kg", mrp: "135" },
+  { account: "Nesto", category: "Flours", skuCode: "CPP05", skuName: "Double Horse Chemba Puttu Podi 500gm", mrp: "69" },
+  { account: "Nesto", category: "Masalas & Spices", skuCode: "CHM10", skuName: "Double Horse Chicken Masala 100gm", mrp: "55" },
+  { account: "Nesto", category: "Masalas & Spices", skuCode: "CIP10", skuName: "Double Horse Chilli Powder 100gm", mrp: "44" },
+  { account: "Nesto", category: "Masalas & Spices", skuCode: "CHP25", skuName: "Double Horse Chilli Powder 250gm", mrp: "109" },
+  { account: "Nesto", category: "Masalas & Spices", skuCode: "CHP50", skuName: "Double Horse Chilli Powder 500Gm", mrp: "214" },
+  { account: "Nesto", category: "Masalas & Spices", skuCode: "CHP01", skuName: "Double Horse Chilly Powder 1Kg", mrp: "423" },
+  { account: "Nesto", category: "Masalas & Spices", skuCode: "COP10", skuName: "Double Horse Coriander Powder 100gm", mrp: "33" },
+  { account: "Nesto", category: "Masalas & Spices", skuCode: "COP01", skuName: "Double Horse Coriander Powder 1Kg", mrp: "312" },
+  { account: "Nesto", category: "Masalas & Spices", skuCode: "COP25", skuName: "Double Horse Coriander Powder 250Gm", mrp: "81" },
+  { account: "Nesto", category: "Masalas & Spices", skuCode: "COP50", skuName: "Double Horse Coriander Powder 500Gm", mrp: "159" },
+  { account: "Nesto", category: "Flours", skuCode: "CPU05", skuName: "Double Horse Corn Puttu Powder 500Gm", mrp: "69" },
+  { account: "Nesto", category: "Flours", skuCode: "ESY05", skuName: "Double Horse Easy Palappam 500Gm", mrp: "59" },
+  { account: "Nesto", category: "Flours", skuCode: "ESYP1", skuName: "Double Horse Easy Palappam Mix 1Kg", mrp: "109" },
+  { account: "Nesto", category: "Masalas & Spices", skuCode: "EGM10", skuName: "Double Horse Egg Roast Masala 100gm", mrp: "48" },
+  { account: "Nesto", category: "Masalas & Spices", skuCode: "FHM10", skuName: "Double Horse Fish Masala 100gm", mrp: "55" },
+  { account: "Nesto", category: "Masalas & Spices", skuCode: "GMA50", skuName: "Double Horse Garam Masala 50GM", mrp: "55" },
+  { account: "Nesto", category: "Flours", skuCode: "IP1KG", skuName: "Double Horse Idiyappam Powder 1Kg", mrp: "112" },
+  { account: "Nesto", category: "Ingredients", skuCode: "JP400", skuName: "Double Horse Jaggery Powder 400 Gm", mrp: "69" },
+  { account: "Nesto", category: "Grain", skuCode: "MCB01", skuName: "Double Horse Jeerakasala Rice 1Kg", mrp: "275" },
+  { account: "Nesto", category: "Grain", skuCode: "MCB05", skuName: "Double Horse Jeerakasala Rice 5Kg", mrp: "1299" },
+  { account: "Nesto", category: "Masalas & Spices", skuCode: "KC100", skuName: "Double Horse Kashmiri Chilli Powder100gm", mrp: "68" },
+  { account: "Nesto", category: "Masalas & Spices", skuCode: "KAC500", skuName: "Double Horse KashmiriChilli Powder 500gm", mrp: "333" },
+  { account: "Nesto", category: "Flours", skuCode: "LVER40", skuName: "Double Horse Long Vermicelli 400gm", mrp: "60" },
+  { account: "Nesto", category: "Masalas & Spices", skuCode: "MTM10", skuName: "Double Horse Meat Masala 100gm", mrp: "55" },
+  { account: "Nesto", category: "Flours", skuCode: "PTRI1", skuName: "Double Horse Pathiri Podi 1Kg", mrp: "109" },
+  { account: "Nesto", category: "Masalas & Spices", skuCode: "PPP10", skuName: "Double Horse Pepper Powder 100gm", mrp: "165" },
+  { account: "Nesto", category: "Masalas & Spices", skuCode: "PP50", skuName: "Double Horse Pepper Powder 50gm", mrp: "85" },
+  { account: "Nesto", category: "Masalas & Spices", skuCode: "PPW10", skuName: "Double Horse Pickle Powder 100gm", mrp: "54" },
+  { account: "Nesto", category: "Flours", skuCode: "RGN1K", skuName: "Double Horse Ragi Powder 1Kg", mrp: "132" },
+  { account: "Nesto", category: "Flours", skuCode: "RGPU5", skuName: "Double Horse Ragi Puttu Podi 500Gm", mrp: "73" },
+  { account: "Nesto", category: "Masalas & Spices", skuCode: "RMM10", skuName: "Double Horse Rasam Powder 100gm", mrp: "58" },
+  { account: "Nesto", category: "Flours", skuCode: "ARN05", skuName: "Double Horse Red Aval 500Gm", mrp: "79" },
+  { account: "Nesto", category: "Flours", skuCode: "ART05", skuName: "Double Horse Red Aval Thick 500Gm", mrp: "79" },
+  { account: "Nesto", category: "Flours", skuCode: "ADA5M", skuName: "Double Horse Rice Palada 500gm", mrp: "99" },
+  { account: "Nesto", category: "Flours", skuCode: "ADA2M", skuName: "Double Horse Rice Palada Payasam 200Gm", mrp: "45" },
+  { account: "Nesto", category: "Flours", skuCode: "PPO05", skuName: "Double Horse Roasted Pathiri Flour 500gm", mrp: "59" },
+  { account: "Nesto", category: "Flours", skuCode: "RGIP5", skuName: "Double Horse Roasted Ragi Pwder 500Gm", mrp: "72" },
+  { account: "Nesto", category: "Flours", skuCode: "RAVA1", skuName: "Double Horse Roasted Rava 1Kg", mrp: "110" },
+  { account: "Nesto", category: "Flours", skuCode: "RAVA5", skuName: "Double Horse Roasted Rava 500Gm", mrp: "59" },
+  { account: "Nesto", category: "Flours", skuCode: "VER20", skuName: "Double Horse Roasted Vermicelli 200Gm", mrp: "29" },
+  { account: "Nesto", category: "Flours", skuCode: "VER40", skuName: "Double Horse Roasted Vermicelli 400gm", mrp: "59" },
+  { account: "Nesto", category: "Flours", skuCode: "VER80", skuName: "Double Horse Roasted Vermicelli 800gm", mrp: "117" },
+  { account: "Nesto", category: "Flours", skuCode: "RPOW1", skuName: "Double Horse Roasted White Rice Pwdr 1Kg", mrp: "99" },
+  { account: "Nesto", category: "Flours", skuCode: "RWRFR02", skuName: "Double Horse Roasted Wt Rice Flour 500gm", mrp: "52" },
+  { account: "Nesto", category: "Porridge", skuCode: "SWBO1", skuName: "Double Horse Samba Broken Wheat 1Kg", mrp: "255" },
+  { account: "Nesto", category: "Porridge", skuCode: "SWBH5", skuName: "Double Horse Samba Wheat Broken 500Gm", mrp: "137" },
+  { account: "Nesto", category: "Masalas & Spices", skuCode: "SMP10", skuName: "Double Horse Sambar Powder 100gm", mrp: "51" },
+  { account: "Nesto", category: "Masalas & Spices", skuCode: "TUP10", skuName: "Double Horse Turmeric Powder 100gm", mrp: "39" },
+  { account: "Nesto", category: "Masalas & Spices", skuCode: "TUP25", skuName: "Double Horse Turmeric Powder 250gm", mrp: "99" },
+  { account: "Nesto", category: "Masalas & Spices", skuCode: "VGM10", skuName: "Double Horse Vegetable Masala 100gm", mrp: "47" },
+  { account: "Nesto", category: "Porridge", skuCode: "WBF05", skuName: "Double Horse Wheat Broken Fine 500gm", mrp: "59" },
+  { account: "Nesto", category: "Flours", skuCode: "AWN05", skuName: "Double Horse White Aval 500Gm", mrp: "73" },
+  { account: "Nesto", category: "Flours", skuCode: "AWT04", skuName: "Double Horse White Aval Thick 400gm", mrp: "59" },
+  { account: "Nesto", category: "Flours", skuCode: "WPUT1", skuName: "Double Horse White Puttu Podi 1Kg", mrp: "99" },
+  { account: "Nesto", category: "Flours", skuCode: "WPU05", skuName: "Double Horse White Puttu Podi 500gm", mrp: "55" },
+  { account: "Nesto", category: "Flours", skuCode: "WPUT5", skuName: "Double Horse White Puttu Podi 5kg", mrp: "475" },
+  { account: "Nesto", category: "Flours", skuCode: "FGRAD02", skuName: "Ribbon Ada 200g", mrp: "54" },
+  { account: "Nesto", category: "Flours", skuCode: "UVR15", skuName: "Unroasted Vermicelli 150g", mrp: "29" },
+  { account: "Nesto", category: "Flours", skuCode: "UPMA80", skuName: "Gluten free instant rice upuma 80g", mrp: "69" },
+  { account: "Nesto", category: "Pickles", skuCode: "CM901", skuName: "Pickle 3+1 off (mango,lime,garlic,dates)", mrp: "187" },
+  { account: "Nesto", category: "Grain", skuCode: "JYP01", skuName: "IPM Vadi Matta 1Kg With 50% Bran", mrp: "129" },
+  { account: "Nesto", category: "Grain", skuCode: "JYPBR1", skuName: "IPM Vadi Matta 1kg with 100% Bran", mrp: "116" },
+  { account: "Nesto", category: "Flours", skuCode: "MA500", skuName: "Maida 500g", mrp: "46" },
+  { account: "Nesto", category: "Flours", skuCode: "MAI01", skuName: "MAIDA 1KG", mrp: "89" },
+  { account: "Nesto", category: "Ingredients", skuCode: "PAD01", skuName: "Pappadam 100g", mrp: "45" },
+  { account: "Nesto", category: "Ingredients", skuCode: "TMPE2P", skuName: "Double Horse Tamarind 200Gm", mrp: "60" },
+  { account: "Nesto", category: "Ingredients", skuCode: "TMPE5", skuName: "Double Horse Tamarind 500Gm", mrp: "149" },
+  { account: "Nesto", category: "Grain", skuCode: "CHS05", skuName: "Double Horse Cherumani Rice 5Kg", mrp: "348" },
+  { account: "Nesto", category: "Grain", skuCode: "CHS10", skuName: "Double Horse Cherumani Rice 10kg", mrp: "690" },
+  { account: "Nesto", category: "Grain", skuCode: "JYA05", skuName: "Double Horse Jaya Rice 5Kg", mrp: "363" },
+  { account: "Nesto", category: "Grain", skuCode: "JYA10", skuName: "Double Horse Jaya Rice 10Kg", mrp: "719" },
+  { account: "Nesto", category: "Grain", skuCode: "JYP05", skuName: "Double Horse Palakkadan Vadi Matta 5Kg", mrp: "374" },
+  { account: "Nesto", category: "Grain", skuCode: "JYP10", skuName: "Double Horse Palakkadan Matta 10Kg", mrp: "750" },
+  { account: "Nesto", category: "Grain", skuCode: "RMP05", skuName: "Double Horse Short Grain Matta Rice 5Kg", mrp: "387" },
+  { account: "Nesto", category: "Grain", skuCode: "RMP10", skuName: "Double Horse Short Grain Matta Rice 10Kg", mrp: "768" },
+  { account: "Nesto", category: "Grain", skuCode: "PRS05", skuName: "Double Horse Ponni Rice 5Kg", mrp: "471" },
+  { account: "Nesto", category: "Grain", skuCode: "PRS10", skuName: "Double Horse Ponni Rice 10Kg", mrp: "935" },
+  { account: "Nesto", category: "Grain", skuCode: "SMR05", skuName: "Double Horse Single Matta Rice 5kg", mrp: "348" },
+  { account: "Nesto", category: "Grain", skuCode: "SMR10", skuName: "Double Horse Single Matta Rice 10kg", mrp: "689" },
+  { account: "Nesto", category: "Grain", skuCode: "SSR05", skuName: "Double Horse Surekha Rice 5Kg", mrp: "373" },
+  { account: "Nesto", category: "Grain", skuCode: "SSR10", skuName: "Double Horse Surekha Rice 10Kg", mrp: "739" },
+  { account: "Kalyan", category: "Ingredients", skuCode: "FGVIN05", skuName: "Double Horse Vinegar 500ml", mrp: "32" },
+  { account: "Kalyan", category: "Ingredients", skuCode: "fgvin01", skuName: "Double Horse Vinegar 1ltr", mrp: "49" },
+  { account: "Kalyan", category: "Payasam", skuCode: "IPP20", skuName: "Instant Parippu Pradhaman 200g", mrp: "115" },
+  { account: "Kalyan", category: "Payasam", skuCode: "SEM03O", skuName: "VERMICELLI KHEER MIX 300 g", mrp: "85" },
+  { account: "Kalyan", category: "Payasam", skuCode: "PLD30", skuName: "PALADA PAYASAM MIX 300 g", mrp: "85" },
+  { account: "Kalyan", category: "Flours", skuCode: "UPM25", skuName: "Instant Uppuma 250g", mrp: "40" },
+  { account: "Kalyan", category: "Payasam", skuCode: "RMP30", skuName: "RICE PALADA PAYASAM  MIX 300 g", mrp: "85" },
+  { account: "Kalyan", category: "Payasam", skuCode: "IPM20", skuName: "Instant Rice Palada Mix 200g", mrp: "85" },
+  { account: "Kalyan", category: "Flours", skuCode: "RSE02", skuName: "RICE SEVAI 200 g", mrp: "62" },
+  { account: "Kalyan", category: "Flours", skuCode: "IIN02", skuName: "INSTANT IDIYAPPAM 200 g", mrp: "84" },
+  { account: "Kalyan", category: "Flours", skuCode: "IIN10", skuName: "INSTANT IDIYAPPAM 1kg", mrp: "357" },
+  { account: "Kalyan", category: "Payasam", skuCode: "TCP18", skuName: "Tender Coconut Payasam Mix 180g", mrp: "112" },
+  { account: "Kalyan", category: "Pickles", skuCode: "MM400", skuName: "KADUKU MANGO PICKLE 400g", mrp: "121" },
+  { account: "Kalyan", category: "Pickles", skuCode: "CM900", skuName: "CUT MANGO 900GM", mrp: "168" },
+  { account: "Kalyan", category: "Pickles", skuCode: "LM900", skuName: "LIME PICKLE 900 g", mrp: "187" },
+  { account: "Kalyan", category: "Ingredients", skuCode: "CNF35", skuName: "Corn Flour 350g", mrp: "87" },
+  { account: "Kalyan", category: "Pickles", skuCode: "FP200", skuName: "Fish  Pickle 200g", mrp: "108" },
+  { account: "Kalyan", category: "Pickles", skuCode: "CM500", skuName: "CUTMANGO PICKLE 500 g", mrp: "113" },
+  { account: "Kalyan", category: "Pickles", skuCode: "LM500", skuName: "LIME PICKLE 500 g", mrp: "113" },
+  { account: "Kalyan", category: "Pickles", skuCode: "TM500", skuName: "TENDER MANGO PICKLE 500 g", mrp: "253" },
+  { account: "Kalyan", category: "Pickles", skuCode: "GA500", skuName: "GARLIC PICKLE 500 g", mrp: "140" },
+  { account: "Kalyan", category: "Flours", skuCode: "AVP02", skuName: "Avalose Podi 200g", mrp: "61" },
+  { account: "Kalyan", category: "Masalas & Spices", skuCode: "GIPE2", skuName: "Ginger Paste 200g", mrp: "65" },
+  { account: "Kalyan", category: "Masalas & Spices", skuCode: "GAPE2", skuName: "Garlic Paste 200g", mrp: "65" },
+  { account: "Kalyan", category: "Masalas & Spices", skuCode: "GGPE2", skuName: "Ginger Garlic Paste 200g", mrp: "65" },
+  { account: "Kalyan", category: "Pickles", skuCode: "LM100", skuName: "LIME  PICKLE 100 g", mrp: "28" },
+  { account: "Kalyan", category: "Pickles", skuCode: "CM100", skuName: " MANGO  PICKLE 100 g", mrp: "28" },
+  { account: "Kalyan", category: "Ingredients", skuCode: "GNGRC15", skuName: "Ginger Coffee 150g", mrp: "93" },
+  { account: "Kalyan", category: "Pickles", skuCode: "CM400", skuName: " MANGO  PICKLE 400 g", mrp: "103" },
+  { account: "Kalyan", category: "Pickles", skuCode: "TM400", skuName: "TENDER MANGO  PICKLE 400 g", mrp: "234" },
+  { account: "Kalyan", category: "Pickles", skuCode: "LM400", skuName: "LIME  PICKLE 400 g", mrp: "112" },
+  { account: "Kalyan", category: "Pickles", skuCode: "GA400", skuName: "GARLIC PICKLE 400g", mrp: "135" },
+  { account: "Kalyan", category: "Pickles", skuCode: "HS400", skuName: "HOT &SWEET LIME DATES PICKLE 400g", mrp: "131" },
+  { account: "Kalyan", category: "Pickles", skuCode: "GI400", skuName: "GINGER  PICKLE 400 g", mrp: "141" },
+  { account: "Kalyan", category: "Pickles", skuCode: "PR400", skuName: "Prawn Pickle 400g", mrp: "225" },
+  { account: "Kalyan", category: "Pickles", skuCode: "DA400", skuName: "DATES  PICKLE 400 g", mrp: "140" },
+  { account: "Kalyan", category: "Pickles", skuCode: "PR200", skuName: "Prawn Pickle 200g", mrp: "108" },
+  { account: "Kalyan", category: "Pickles", skuCode: "CM200", skuName: "MANGO  PICKLE 200 g", mrp: "56" },
+  { account: "Kalyan", category: "Pickles", skuCode: "LM200", skuName: "LIME  PICKLE 200 g", mrp: "56" },
+  { account: "Kalyan", category: "Pickles", skuCode: "DA200", skuName: "DATES  PICKLE 200 g", mrp: "71" },
+  { account: "Kalyan", category: "Pickles", skuCode: "TM200", skuName: "TENDER MANGO  PICKLE 200 g", mrp: "103" },
+  { account: "Kalyan", category: "Pickles", skuCode: "GA200", skuName: "GARLIC PICKLE 200g", mrp: "61" },
+  { account: "Kalyan", category: "Pickles", skuCode: "PR150", skuName: "Prawn Pickle 150g", mrp: "103" },
+  { account: "Kalyan", category: "Pickles", skuCode: "GI150", skuName: "GINGER  PICKLE 150 g", mrp: "65" },
+  { account: "Kalyan", category: "Pickles", skuCode: "LM150", skuName: "LIME  PICKLE 150 g", mrp: "61" },
+  { account: "Kalyan", category: "Pickles", skuCode: "DA150", skuName: "DATES  PICKLE 150 g", mrp: "71" },
+  { account: "Kalyan", category: "Pickles", skuCode: "TM150", skuName: "TENDER MANGO  PICKLE 150 g", mrp: "103" },
+  { account: "Kalyan", category: "Pickles", skuCode: "CM150", skuName: "MANGO  PICKLE 150 g", mrp: "56" },
+  { account: "Kalyan", category: "Pickles", skuCode: "GA150", skuName: "GARLIC PICKLE 150g", mrp: "62" },
+  { account: "Kalyan", category: "Pickles", skuCode: "FP150", skuName: "Fish  Pickle 150g", mrp: "93" },
+  { account: "Kalyan", category: "Ingredients", skuCode: "MCR04", skuName: "MACRONI  400g", mrp: "62" },
+  { account: "Kalyan", category: "Ingredients", skuCode: "MCR05", skuName: "MACRONI  200g", mrp: "34" },
+  { account: "Kalyan", category: "Ingredients", skuCode: "SCY03", skuName: "SOYA CHUNKS 200g", mrp: "47" },
+  { account: "Kalyan", category: "Ingredients", skuCode: "SCYCN02", skuName: "SOYA CHUNKS NANO 200g", mrp: "49" },
+  { account: "Kalyan", category: "Ingredients", skuCode: "MCR08", skuName: "Macaroni 800g", mrp: "108" },
+  { account: "Kalyan", category: "Ingredients", skuCode: "CNF15", skuName: "CORN FLOUR 150g", mrp: "45" },
+  { account: "Kalyan", category: "Porridge", skuCode: "MBEH5", skuName: "MATTA BROKEN RICE 500 g", mrp: "64" },
+  { account: "Kalyan", category: "Flours", skuCode: "IP1KG", skuName: "6 Minute Idiyappam powder 1 k.g", mrp: "112" },
+  { account: "Kalyan", category: "Porridge", skuCode: "MBE01", skuName: "MATTA BROKEN RICE 1 kg", mrp: "119" },
+  { account: "Kalyan", category: "Grain", skuCode: "CMB01", skuName: "CHEF MATE 1Kg", mrp: "249" },
+  { account: "Kalyan", category: "Flours", skuCode: "UVR15", skuName: "Unroasted Vermicelli 150g", mrp: "29" },
+  { account: "Kalyan", category: "Flours", skuCode: "AWT04", skuName: "WHITE  AVAL Thick 400g", mrp: "59" },
+  { account: "Kalyan", category: "Porridge", skuCode: "BRMB5", skuName: "BRAN RICH MATTA BROKEN RICE 500gm", mrp: "51" },
+  { account: "Kalyan", category: "Flours", skuCode: "CATA1", skuName: "CHAKKI FRESH ATTA 1 Kg", mrp: "79" },
+  { account: "Kalyan", category: "Flours", skuCode: "AWN05", skuName: "WHITE  AVAL 500g", mrp: "73" },
+  { account: "Kalyan", category: "Flours", skuCode: "ESYP1", skuName: "EASY PALAPPAM MIX 1kg", mrp: "109" },
+  { account: "Kalyan", category: "Flours", skuCode: "IDM05", skuName: "1HR IDLI - DOSA MIX 500G", mrp: "85" },
+  { account: "Kalyan", category: "Flours", skuCode: "ADA5M", skuName: "Rice Palada 500g", mrp: "99" },
+  { account: "Kalyan", category: "Porridge", skuCode: "WBO05", skuName: "BANSI WHEAT BROKEN 500GM", mrp: "59" },
+  { account: "Kalyan", category: "Porridge", skuCode: "WBF05", skuName: "Wheat Broken Fine 500GM", mrp: "59" },
+  { account: "Kalyan", category: "Flours", skuCode: "RGN1K", skuName: "Ragi Nice Powder 1kg", mrp: "132" },
+  { account: "Kalyan", category: "Flours", skuCode: "WPP05", skuName: "WHEAT PUTTU PODI  500 g", mrp: "75" },
+  { account: "Kalyan", category: "Flours", skuCode: "FGRAD02", skuName: "Ribbon Ada 200g", mrp: "54" },
+  { account: "Kalyan", category: "Masalas & Spices", skuCode: "CHM10", skuName: "CHICKEN MASALA 100 g", mrp: "55" },
+  { account: "Kalyan", category: "Masalas & Spices", skuCode: "FHM10", skuName: "FISH MASALA 100 g", mrp: "55" },
+  { account: "Kalyan", category: "Masalas & Spices", skuCode: "EGM10", skuName: "EGG  ROAST MASALA 100 g", mrp: "48" },
+  { account: "Kalyan", category: "Masalas & Spices", skuCode: "MTM10", skuName: "MEAT MASALA 100 g", mrp: "55" },
+  { account: "Kalyan", category: "Masalas & Spices", skuCode: "SMP10", skuName: "SAMBAR POWDER 100 g", mrp: "51" },
+  { account: "Kalyan", category: "Masalas & Spices", skuCode: "RMM10", skuName: "RASAM POWDER 100 g", mrp: "58" },
+  { account: "Kalyan", category: "Ingredients", skuCode: "JP400", skuName: "JAGGERY POWDER 4000GM", mrp: "69" },
+  { account: "Kalyan", category: "Flours", skuCode: "CATA5", skuName: "CHAKKI FRESH ATTA 5 Kg", mrp: "379" },
+  { account: "Kalyan", category: "Flours", skuCode: "PPO05", skuName: "Roasted Pathiri Flour  500g", mrp: "59" },
+  { account: "Kalyan", category: "Flours", skuCode: "ART05", skuName: "AVAL THICK RED  500g", mrp: "79" },
+  { account: "Kalyan", category: "Masalas & Spices", skuCode: "GMA50", skuName: "GARAM MASALA 50 g", mrp: "55" },
+  { account: "Kalyan", category: "Masalas & Spices", skuCode: "PPW10", skuName: "PICKLE POWDER 100 g", mrp: "54" },
+  { account: "Kalyan", category: "Masalas & Spices", skuCode: "BMP10", skuName: "BIRYANI MASALA 100 g", mrp: "60" },
+  { account: "Kalyan", category: "Masalas & Spices", skuCode: "VGM10", skuName: "VEGETABLE  MASALA 100 g", mrp: "47" },
+  { account: "Kalyan", category: "Flours", skuCode: "CPP05", skuName: "CHEMBA PUTTU PODI  500g", mrp: "69" },
+  { account: "Kalyan", category: "Flours", skuCode: "WPU05", skuName: "WHITE PUTTU PODI 500 g", mrp: "55" },
+  { account: "Kalyan", category: "Flours", skuCode: "RPOW5", skuName: "APPAM IDIYAPPAM PATHIRI RICE FLOUR 500g", mrp: "52" },
+  { account: "Kalyan", category: "Flours", skuCode: "ADA2M", skuName: "RICE PALADA 200 g", mrp: "45" },
+  { account: "Kalyan", category: "Flours", skuCode: "ARN05", skuName: "RED AVAL 500g", mrp: "79" },
+  { account: "Kalyan", category: "Flours", skuCode: "ESY05", skuName: "EASY PALAPPAM MIX  500 g", mrp: "59" },
+  { account: "Kalyan", category: "Porridge", skuCode: "SWBH5", skuName: "SAMBA BROKEN  WHEAT 500 g", mrp: "137" },
+  { account: "Kalyan", category: "Grain", skuCode: "MCB01", skuName: "JEERAKASALA RICE 1Kg", mrp: "275" },
+  { account: "Kalyan", category: "Porridge", skuCode: "SWBO1", skuName: "Samba Broken Wheat 1KG", mrp: "255" },
+  { account: "Kalyan", category: "Flours", skuCode: "RGPU5", skuName: "RAGI PUTTUPODI 500g", mrp: "73" },
+  { account: "Kalyan", category: "Flours", skuCode: "RGIP5", skuName: "ROASTED RAGI POWDER  500g", mrp: "72" },
+  { account: "Kalyan", category: "Porridge", skuCode: "SWF05", skuName: "Samba Wheat Broken - Fine 500GM", mrp: "140" },
+  { account: "Kalyan", category: "Flours", skuCode: "VER20", skuName: "ROASTED VERMICELLI 200 g", mrp: "29" },
+  { account: "Kalyan", category: "Flours", skuCode: "CPU05", skuName: "CORN PUTTU PODI  500g", mrp: "69" },
+  { account: "Kalyan", category: "Flours", skuCode: "CPP01", skuName: "CHEMBA PUTTU PODI  1Kg", mrp: "135" },
+  { account: "Kalyan", category: "Flours", skuCode: "WPUT1", skuName: "WHITE PUTTU PODI 1 kg", mrp: "99" },
+  { account: "Kalyan", category: "Flours", skuCode: "RPOW1", skuName: "APPAM IDIYAPPAM PATHIRI RICE FLOUR 1kg", mrp: "99" },
+  { account: "Kalyan", category: "Flours", skuCode: "PTRI1", skuName: "ROASTED PATHIRI FLOUR  1kg", mrp: "109" },
+  { account: "Kalyan", category: "Flours", skuCode: "RAVA5", skuName: "ROASTED RAVA 500g", mrp: "59" },
+  { account: "Kalyan", category: "Flours", skuCode: "RAVA1", skuName: "ROASTED RAVA 1 kg", mrp: "110" },
+  { account: "Kalyan", category: "Masalas & Spices", skuCode: "PP50", skuName: "PEPPER POWDER 50 g", mrp: "85" },
+  { account: "Kalyan", category: "Masalas & Spices", skuCode: "COP10", skuName: "CORIANDER POWDER 100 g", mrp: "33" },
+  { account: "Kalyan", category: "Masalas & Spices", skuCode: "CIP10", skuName: "Chilli Powder 100 g", mrp: "44" },
+  { account: "Kalyan", category: "Masalas & Spices", skuCode: "TUP10", skuName: "TURMERIC POWDER 100 g", mrp: "39" },
+  { account: "Kalyan", category: "Masalas & Spices", skuCode: "PPP10", skuName: "PEPPER POWDER 100 g", mrp: "165" },
+  { account: "Kalyan", category: "Flours", skuCode: "CATA2", skuName: "Chakki Fresh Atta 2kg", mrp: "155" },
+  { account: "Kalyan", category: "Masalas & Spices", skuCode: "COP25", skuName: "CORIANDER POWDER 250 g", mrp: "81" },
+  { account: "Kalyan", category: "Masalas & Spices", skuCode: "CHP25", skuName: "Chilli Powder 250 g", mrp: "109" },
+  { account: "Kalyan", category: "Masalas & Spices", skuCode: "TUP25", skuName: "TURMERIC POWDER 250 g", mrp: "99" },
+  { account: "Kalyan", category: "Masalas & Spices", skuCode: "COP50", skuName: "CORIANDER POWDER 500 g", mrp: "159" },
+  { account: "Kalyan", category: "Masalas & Spices", skuCode: "CHP50", skuName: "Chilli Powder 500 g", mrp: "214" },
+  { account: "Kalyan", category: "Masalas & Spices", skuCode: "COP01", skuName: "CORIANDER POWDER 1Kg", mrp: "312" },
+  { account: "Kalyan", category: "Masalas & Spices", skuCode: "CHP01", skuName: "Chilli Powder 1Kg", mrp: "423" },
+  { account: "Kalyan", category: "Masalas & Spices", skuCode: "KC100", skuName: "Kashmiri Chilli Powder 100g", mrp: "68" },
+  { account: "Kalyan", category: "Porridge", skuCode: "MAB50", skuName: "MB RICE SUPER 500 g", mrp: "62" },
+  { account: "Kalyan", category: "Flours", skuCode: "VER40", skuName: "ROASTED VERMICELLI 400 g", mrp: "59" },
+  { account: "Kalyan", category: "Masalas & Spices", skuCode: "KC250", skuName: "Kashmiri Chilli Powder 250g", mrp: "169" },
+  { account: "Kalyan", category: "Masalas & Spices", skuCode: "KAC500", skuName: "Kashmiri Chilli Powder 500g", mrp: "333" },
+  { account: "Kalyan", category: "Flours", skuCode: "LVER40", skuName: "LONG VERMICELLI 400g", mrp: "60" },
+  { account: "Kalyan", category: "Flours", skuCode: "RWRFR02", skuName: "DH Roasted Wt Rice Flour 500g", mrp: "52" },
+  { account: "Kalyan", category: "Ingredients", skuCode: "ASFTP05", skuName: "ASFOETIDA  powder 50g", mrp: "89" },
+  { account: "Kalyan", category: "Flours", skuCode: "WPUT5", skuName: "WHITE PUTTU PODI 5KG", mrp: "475" },
+  { account: "Kalyan", category: "Flours", skuCode: "RPOW5K", skuName: "APPAM IDIYAPPAM  RICE FLOUR 5kg", mrp: "475" },
+  { account: "Kalyan", category: "Flours", skuCode: "RWRFR01", skuName: "Roasted White Rice Flour 1kg", mrp: "99" },
+  { account: "Kalyan", category: "Flours", skuCode: "VER80", skuName: "Roasted Vermicelli 800g", mrp: "117" },
+  { account: "Kalyan", category: "Flours", skuCode: "IP500", skuName: "6 Minute Idiyappam powder 500GM", mrp: "59" },
+  { account: "Kalyan", category: "Ingredients", skuCode: "TMPE2P", skuName: "INDIAN  TAMARIND 200g", mrp: "60" },
+  { account: "Kalyan", category: "Ingredients", skuCode: "TMPE5", skuName: "INDIAN  TAMARIND 500g", mrp: "149" },
+  { account: "Kalyan", category: "Grain", skuCode: "CHS05", skuName: "DOUBLE HORSE CHERUMANI STX 5KG", mrp: "348" },
+  { account: "Kalyan", category: "Grain", skuCode: "CHS10", skuName: "DOUBLE HORSE CHERUMANI STX 10KG", mrp: "690" },
+  { account: "Kalyan", category: "Grain", skuCode: "JYA05", skuName: "DOUBLE HORSE JAYA RICE STX 5KG", mrp: "363" },
+  { account: "Kalyan", category: "Grain", skuCode: "JYA10", skuName: "DOUBLE HORSE JAYA RICE STX 10KG", mrp: "719" },
+  { account: "Kalyan", category: "Grain", skuCode: "JYP05", skuName: "DOUBLE HORSE JYOTI VADI MATTA PARBLD 5KG", mrp: "374" },
+  { account: "Kalyan", category: "Grain", skuCode: "JYP10", skuName: "DOUBLE HORSE JYOTI VADI MATA PARBLD 10KG", mrp: "750" },
+  { account: "Kalyan", category: "Grain", skuCode: "RMP05", skuName: "DOUBLE HORSE ROSE MATTA PAR BLD STX 5KG", mrp: "387" },
+  { account: "Kalyan", category: "Grain", skuCode: "RMP10", skuName: "DOUBLE HORSE ROSE MATTA PAR BLD STX 10KG", mrp: "768" },
+  { account: "Kalyan", category: "Grain", skuCode: "SMR05", skuName: "DOUBLE HORSE SINGLE MATTA 5KG", mrp: "348" },
+  { account: "Kalyan", category: "Grain", skuCode: "SMR10", skuName: "SINGLE MATTA RICE 10KG", mrp: "689" },
+  { account: "Kalyan", category: "Grain", skuCode: "SSR05", skuName: "DOUBLE HORSE SUREKA STX 5KG", mrp: "373" },
+  { account: "Kalyan", category: "Grain", skuCode: "SSR10", skuName: "DOUBLE HORSE SUREKA STX 10KG", mrp: "739" },
+  { account: "Kalyan", category: "Grain", skuCode: "PRS05", skuName: "DOUBLE HORSE PONNI R ICE STX 5KG", mrp: "471" },
+  { account: "Kalyan", category: "Grain", skuCode: "PRS10", skuName: "DOUBLE HORSE PONNI RICE STX 10KG", mrp: "935" }
+];
+
+
+/* =========================================================
+   STATE
+========================================================= */
+
+const selectedProductsByCategory = {};
+const shelfReportData = [];
+
+/* =========================================================
+   ELEMENTS
+========================================================= */
+
+const intern = document.getElementById("intern");
+const dateTime = document.getElementById("dateTime");
+const gps = document.getElementById("gps");
+
+const accountSelect = document.getElementById("account");
+const outletSelect = document.getElementById("outlet");
+
+const categorySelect = document.getElementById("category");
+const shelfCategory = document.getElementById("shelfCategory");
+
+const productList = document.getElementById("productList");
+const availabilityPct = document.getElementById("availabilityPct");
+
+const totalFacings = document.getElementById("totalFacings");
+const ourFacings = document.getElementById("ourFacings");
+const shelfTableBody = document.getElementById("shelfTableBody");
+
+/* =========================================================
+   DATE (FIXED - NO RESET)
+========================================================= */
+
+if (!localStorage.getItem("savedDateTime")) {
+    localStorage.setItem(
+        "savedDateTime",
+        new Date().toLocaleString()
+    );
+}
+
+dateTime.value = localStorage.getItem("savedDateTime");
+
+/* =========================================================
+   LOCATION
+========================================================= */
+
+function captureLocation() {
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            gps.value =
+                pos.coords.latitude.toFixed(5) +
+                "," +
+                pos.coords.longitude.toFixed(5);
+        },
+        () => {
+            alert("Please allow location access");
+        }
+    );
+}
+
+/* =========================================================
+   ACCOUNT LOAD
+========================================================= */
+
+function loadAccounts() {
+    accountSelect.innerHTML =
+        `<option value="">Select Account</option>`;
+
+    [...new Set(outlets.map(x => x.account))]
+        .forEach(account => {
+            accountSelect.innerHTML +=
+                `<option value="${account}">
+                    ${account}
+                </option>`;
+        });
+}
+
+loadAccounts();
+
+/* =========================================================
+   ACCOUNT CHANGE
+========================================================= */
+
+accountSelect.onchange = () => {
+    const acc = accountSelect.value;
+
+    /* OUTLETS */
+
+    outletSelect.innerHTML =
+        `<option value="">Select Outlet</option>`;
+
+    outlets
+        .filter(x => x.account === acc)
+        .forEach(x => {
+            outletSelect.innerHTML +=
+                `<option value="${x.name}">
+                    ${x.name}
+                </option>`;
+        });
+
+    /* CATEGORIES */
+
+    categorySelect.innerHTML = "";
+    shelfCategory.innerHTML = "";
+
+    [...new Set(
+        skuMaster
+            .filter(x => x.account === acc)
+            .map(x => x.category)
+    )]
+    .forEach(category => {
+        categorySelect.innerHTML +=
+            `<option value="${category}">
+                ${category}
+            </option>`;
+
+        shelfCategory.innerHTML +=
+            `<option value="${category}">
+                ${category}
+            </option>`;
+    });
+
+    loadProducts();
+};
+
+categorySelect.onchange = loadProducts;
+
+/* =========================================================
+   PRODUCTS
+========================================================= */
+
+function loadProducts() {
+    const list = skuMaster.filter(
+        x =>
+            x.account === accountSelect.value &&
+            x.category === categorySelect.value
+    );
+
+    productList.innerHTML = "";
+
+    list.forEach(item => {
+        const checked =
+            (selectedProductsByCategory[
+                categorySelect.value
+            ] || []).includes(item.skuName);
+
+        productList.innerHTML += `
+            <label class="flex items-center gap-2 bg-gray-50 p-2 rounded">
+                <input
+                    type="checkbox"
+                    value="${item.skuName}"
+                    ${checked ? "checked" : ""}
+                    onchange="updateSelection()"
+                >
+                <span>${item.skuName}</span>
+            </label>
+        `;
+    });
+
+    calcAvailability();
+}
+
+function updateSelection() {
+    selectedProductsByCategory[
+        categorySelect.value
+    ] = [
+        ...document.querySelectorAll(
+            "#productList input:checked"
+        )
+    ].map(x => x.value);
+
+    calcAvailability();
+}
+
+function calcAvailability() {
+    const total =
+        document.querySelectorAll(
+            "#productList input"
+        ).length;
+
+    const selected =
+        document.querySelectorAll(
+            "#productList input:checked"
+        ).length;
+
+    availabilityPct.innerText =
+        total
+            ? ((selected / total) * 100).toFixed(1)
+            : 0;
+}
+
+/* =========================================================
+   SHARE OF SHELF
+========================================================= */
+
+function addShelf() {
+    const cat = shelfCategory.value;
+    const total = +totalFacings.value || 0;
+    const ours = +ourFacings.value || 0;
+
+    if (!cat || total <= 0) {
+        alert("Enter valid data");
+        return;
+    }
+
+    const pct =
+        ((ours / total) * 100).toFixed(1);
+
+    const row = {
+        category: cat,
+        totalFacings: total,
+        ourFacings: ours,
+        sharePct: pct
+    };
+
+    const existingIndex =
+        shelfReportData.findIndex(
+            x => x.category === cat
+        );
+
+    if (existingIndex >= 0) {
+        shelfReportData[existingIndex] = row;
+    } else {
+        shelfReportData.push(row);
+    }
+
+    renderShelf();
+
+    totalFacings.value = "";
+    ourFacings.value = "";
+    shelfCategory.selectedIndex = 0;
+}
+
+function renderShelf() {
+    shelfTableBody.innerHTML = "";
+
+    shelfReportData.forEach(row => {
+        const tr = document.createElement("tr");
+
+        tr.innerHTML = `
+            <td class="border p-2">${row.category}</td>
+            <td class="border p-2">${row.totalFacings}</td>
+            <td class="border p-2">${row.ourFacings}</td>
+            <td class="border p-2">${row.sharePct}%</td>
+        `;
+
+        shelfTableBody.appendChild(tr);
+    });
+}
+
+/* =========================================================
+   SAVE DRAFT (FIXED)
+========================================================= */
+
+function saveDraft() {
+    localStorage.setItem(
+        "draft",
+        JSON.stringify({
+            intern: intern.value,
+            account: accountSelect.value,
+            outlet: outletSelect.value,
+            selectedProductsByCategory,
+            shelfReportData
+        })
+    );
+
+    localStorage.setItem(
+        "savedDateTime",
+        dateTime.value
+    );
+
+    alert("Saved successfully");
+}
+
+/* =========================================================
+   LOAD DRAFT (FIXED)
+========================================================= */
+
+window.onload = () => {
+    const draft = JSON.parse(
+        localStorage.getItem("draft") || "null"
+    );
+
+    if (localStorage.getItem("savedDateTime")) {
+        dateTime.value =
+            localStorage.getItem("savedDateTime");
+    }
+
+    if (!draft) return;
+
+    intern.value = draft.intern || "";
+    accountSelect.value = draft.account || "";
+
+    accountSelect.onchange();
+
+    setTimeout(() => {
+        outletSelect.value = draft.outlet || "";
+
+        Object.keys(
+            selectedProductsByCategory
+        ).forEach(key => {
+            delete selectedProductsByCategory[key];
+        });
+
+        Object.assign(
+            selectedProductsByCategory,
+            draft.selectedProductsByCategory || {}
+        );
+
+        shelfReportData.length = 0;
+        shelfReportData.push(
+            ...(draft.shelfReportData || [])
+        );
+
+        renderShelf();
+        loadProducts();
+
+    }, 200);
+};
+
+/* =========================================================
+   CLEAR DRAFT (FIXED)
+========================================================= */
+
+function clearDraft() {
+    localStorage.removeItem("draft");
+    localStorage.removeItem("savedDateTime");
+    location.reload();
+}
+
+/* =========================================================
+   EXCEL BUILDERS
+========================================================= */
+
+function buildSummary() {
+    return [{
+        Account: accountSelect.value,
+        Outlet: outletSelect.value,
+        Intern: intern.value,
+        GPS: gps.value,
+        DateTime: dateTime.value
+    }];
+}
+
+function buildAvailability() {
+    const rows = [];
+
+    Object.keys(selectedProductsByCategory)
+        .forEach(cat => {
+            const all = skuMaster.filter(
+                x =>
+                    x.account === accountSelect.value &&
+                    x.category === cat
+            );
+
+            const selected =
+                selectedProductsByCategory[cat] || [];
+
+            rows.push({
+                Account: accountSelect.value,
+                Outlet: outletSelect.value,
+                Category: cat,
+                Available: selected.join(", "),
+                AvailabilityPercent:
+                    all.length
+                        ? ((selected.length / all.length) * 100).toFixed(1)
+                        : 0
+            });
+        });
+
+    return rows;
+}
+
+function buildNotAvailable() {
+    const rows = [];
+
+    Object.keys(selectedProductsByCategory)
+        .forEach(cat => {
+            const all = skuMaster.filter(
+                x =>
+                    x.account === accountSelect.value &&
+                    x.category === cat
+            );
+
+            const selected =
+                selectedProductsByCategory[cat] || [];
+
+            all.forEach(sku => {
+                if (!selected.includes(sku.skuName)) {
+                    rows.push({
+                        Account: accountSelect.value,
+                        Outlet: outletSelect.value,
+                        SKUCode: sku.skuCode,
+                        SKUName: sku.skuName
+                    });
+                }
+            });
+        });
+
+    return rows;
+}
+
+function buildSOS() {
+    return shelfReportData.map(row => ({
+        Account: accountSelect.value,
+        Outlet: outletSelect.value,
+        Category: row.category,
+        Total: row.totalFacings,
+        Our: row.ourFacings,
+        Share: row.sharePct
+    }));
+}
+
+/* =========================================================
+   WORKBOOK
+========================================================= */
+
+function createWorkbook() {
+    const wb = XLSX.utils.book_new();
+
+    XLSX.utils.book_append_sheet(
+        wb,
+        XLSX.utils.json_to_sheet(buildSummary()),
+        "Summary"
+    );
+
+    XLSX.utils.book_append_sheet(
+        wb,
+        XLSX.utils.json_to_sheet(buildAvailability()),
+        "Availability"
+    );
+
+    XLSX.utils.book_append_sheet(
+        wb,
+        XLSX.utils.json_to_sheet(buildSOS()),
+        "SOS Check"
+    );
+
+    XLSX.utils.book_append_sheet(
+        wb,
+        XLSX.utils.json_to_sheet(buildNotAvailable()),
+        "Not Available SKUs"
+    );
+
+    return wb;
+}
+
+/* =========================================================
+   DOWNLOAD
+========================================================= */
+
+function downloadExcel() {
+    XLSX.writeFile(
+        createWorkbook(),
+        "StoreAudit.xlsx"
+    );
+}
+
+/* =========================================================
+   SHARE (SAFE VERSION)
+========================================================= */
+
+async function shareExcel() {
+    downloadExcel();
+
+    alert(
+        "Excel downloaded successfully. Please share manually from Downloads folder."
+    );
+}
+
+</script>
+
+</body>
+</html>
