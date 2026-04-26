@@ -15,7 +15,6 @@
 
 <h2 class="text-xl font-bold text-center">Store Audit App</h2>
 
-<!-- INTERN -->
 <select id="intern" class="border p-3 w-full rounded-lg">
 <option value="">Select Intern</option>
 <option>Sanjay</option>
@@ -27,56 +26,32 @@
 <option>Megha</option>
 </select>
 
-<!-- DATE -->
 <input id="dateTime" class="border p-3 w-full bg-gray-100 rounded-lg" readonly>
 
-<!-- ACCOUNT -->
 <select id="account" class="border p-3 w-full rounded-lg"></select>
-
-<!-- OUTLET -->
 <select id="outlet" class="border p-3 w-full rounded-lg"></select>
 
-<!-- GPS -->
 <input id="gps" class="border p-3 w-full bg-gray-100 rounded-lg" readonly>
 
 <button onclick="captureLocation()" class="bg-blue-700 text-white w-full p-3 rounded-lg">
 📍 Capture Location
 </button>
 
-<!-- AVAILABILITY -->
 <div>
 <h3 class="font-semibold text-lg">Availability</h3>
-
 <select id="category" class="border p-3 w-full rounded-lg mt-2"></select>
-
 <div id="productList" class="mt-3 space-y-2"></div>
-
 <div class="mt-2 font-medium">
 Availability %: <span id="availabilityPct">0</span>
 </div>
 </div>
 
-<!-- SHARE OF SHELF -->
 <div>
 <h3 class="font-semibold text-lg">Share of Shelf</h3>
-
 <select id="shelfCategory" class="border p-3 w-full rounded-lg mt-2"></select>
 
-<input
-id="totalFacings"
-type="number"
-inputmode="numeric"
-class="border p-3 w-full mt-2 rounded-lg"
-placeholder="Total Facings"
->
-
-<input
-id="ourFacings"
-type="number"
-inputmode="numeric"
-class="border p-3 w-full mt-2 rounded-lg"
-placeholder="Our Facings"
->
+<input id="totalFacings" type="number" inputmode="numeric" class="border p-3 w-full mt-2 rounded-lg" placeholder="Total Facings">
+<input id="ourFacings" type="number" inputmode="numeric" class="border p-3 w-full mt-2 rounded-lg" placeholder="Our Facings">
 
 <button onclick="addShelf()" class="bg-blue-600 text-white w-full p-3 mt-2 rounded-lg">
 Add to Report
@@ -99,34 +74,14 @@ Add to Report
 
 </div>
 
-<!-- ACTION BAR -->
 <div class="fixed bottom-0 left-0 right-0 bg-white border-t p-3 flex gap-2">
-
-<button onclick="downloadExcel()" class="bg-green-600 text-white flex-1 p-3 rounded-lg text-sm">
-Download
-</button>
-
-<button onclick="shareExcel()" class="bg-purple-600 text-white flex-1 p-3 rounded-lg text-sm">
-Share
-</button>
-
-<button onclick="saveDraft()" class="bg-yellow-500 flex-1 p-3 rounded-lg text-sm">
-Save
-</button>
-
-<button onclick="clearDraft()" class="bg-red-500 text-white flex-1 p-3 rounded-lg text-sm">
-Clear
-</button>
-
+<button onclick="downloadExcel()" class="bg-green-600 text-white flex-1 p-3 rounded-lg text-sm">Download</button>
+<button onclick="shareExcel()" class="bg-purple-600 text-white flex-1 p-3 rounded-lg text-sm">Share</button>
+<button onclick="saveDraft()" class="bg-yellow-500 flex-1 p-3 rounded-lg text-sm">Save</button>
+<button onclick="clearDraft()" class="bg-red-500 text-white flex-1 p-3 rounded-lg text-sm">Clear</button>
 </div>
 
 <script>
-
-/* =========================================================
-   MASTER DATA
-   IMPORTANT:
-   Replace below sample arrays with your FULL actual data
-========================================================= */
 
 const outlets = [
   { account: "Lulu", name: "Edappally", city: "Cochin" },
@@ -160,7 +115,6 @@ const outlets = [
 
   { account: "Kalyan", name: "North Bus Stand", city: "Thrissur" }
 ];
-
 const skuMaster = [
   { account: "Lulu", category: "Ingredients", skuCode: "fgvin01", skuName: "D/Horse Synthetic Vinegar 1L", mrp: "49" },
   { account: "Lulu", category: "Ingredients", skuCode: "FGVIN05", skuName: "D/Horse Synthetic Vinegar 500ml", mrp: "32" },
@@ -956,58 +910,33 @@ const skuMaster = [
 ];
 
 
-/* =========================================================
-   STATE
-========================================================= */
 
 const selectedProductsByCategory = {};
 const shelfReportData = [];
 
-/* =========================================================
-   ELEMENTS
-========================================================= */
-
 const intern = document.getElementById("intern");
 const dateTime = document.getElementById("dateTime");
 const gps = document.getElementById("gps");
-
 const accountSelect = document.getElementById("account");
 const outletSelect = document.getElementById("outlet");
-
 const categorySelect = document.getElementById("category");
 const shelfCategory = document.getElementById("shelfCategory");
-
 const productList = document.getElementById("productList");
 const availabilityPct = document.getElementById("availabilityPct");
-
 const totalFacings = document.getElementById("totalFacings");
 const ourFacings = document.getElementById("ourFacings");
 const shelfTableBody = document.getElementById("shelfTableBody");
 
-/* =========================================================
-   DATE (FIXED - NO RESET)
-========================================================= */
-
 if (!localStorage.getItem("savedDateTime")) {
-    localStorage.setItem(
-        "savedDateTime",
-        new Date().toLocaleString()
-    );
+    localStorage.setItem("savedDateTime", new Date().toLocaleString());
 }
 
 dateTime.value = localStorage.getItem("savedDateTime");
 
-/* =========================================================
-   LOCATION
-========================================================= */
-
 function captureLocation() {
     navigator.geolocation.getCurrentPosition(
         (pos) => {
-            gps.value =
-                pos.coords.latitude.toFixed(5) +
-                "," +
-                pos.coords.longitude.toFixed(5);
+            gps.value = pos.coords.latitude.toFixed(5) + "," + pos.coords.longitude.toFixed(5);
         },
         () => {
             alert("Please allow location access");
@@ -1015,100 +944,47 @@ function captureLocation() {
     );
 }
 
-/* =========================================================
-   ACCOUNT LOAD
-========================================================= */
-
 function loadAccounts() {
-    accountSelect.innerHTML =
-        `<option value="">Select Account</option>`;
-
-    [...new Set(outlets.map(x => x.account))]
-        .forEach(account => {
-            accountSelect.innerHTML +=
-                `<option value="${account}">
-                    ${account}
-                </option>`;
-        });
+    accountSelect.innerHTML = `<option value="">Select Account</option>`;
+    [...new Set(outlets.map(x => x.account))].forEach(account => {
+        accountSelect.innerHTML += `<option value="${account}">${account}</option>`;
+    });
 }
 
 loadAccounts();
 
-/* =========================================================
-   ACCOUNT CHANGE
-========================================================= */
-
 accountSelect.onchange = () => {
     const acc = accountSelect.value;
 
-    /* OUTLETS */
-
-    outletSelect.innerHTML =
-        `<option value="">Select Outlet</option>`;
-
-    outlets
-        .filter(x => x.account === acc)
-        .forEach(x => {
-            outletSelect.innerHTML +=
-                `<option value="${x.name}">
-                    ${x.name}
-                </option>`;
-        });
-
-    /* CATEGORIES */
+    outletSelect.innerHTML = `<option value="">Select Outlet</option>`;
+    outlets.filter(x => x.account === acc).forEach(x => {
+        outletSelect.innerHTML += `<option value="${x.name}">${x.name}</option>`;
+    });
 
     categorySelect.innerHTML = "";
     shelfCategory.innerHTML = "";
 
-    [...new Set(
-        skuMaster
-            .filter(x => x.account === acc)
-            .map(x => x.category)
-    )]
-    .forEach(category => {
-        categorySelect.innerHTML +=
-            `<option value="${category}">
-                ${category}
-            </option>`;
-
-        shelfCategory.innerHTML +=
-            `<option value="${category}">
-                ${category}
-            </option>`;
-    });
+    [...new Set(skuMaster.filter(x => x.account === acc).map(x => x.category))]
+        .forEach(category => {
+            categorySelect.innerHTML += `<option value="${category}">${category}</option>`;
+            shelfCategory.innerHTML += `<option value="${category}">${category}</option>`;
+        });
 
     loadProducts();
 };
 
 categorySelect.onchange = loadProducts;
 
-/* =========================================================
-   PRODUCTS
-========================================================= */
-
 function loadProducts() {
-    const list = skuMaster.filter(
-        x =>
-            x.account === accountSelect.value &&
-            x.category === categorySelect.value
-    );
-
+    const list = skuMaster.filter(x => x.account === accountSelect.value && x.category === categorySelect.value);
     productList.innerHTML = "";
 
     list.forEach(item => {
-        const checked =
-            (selectedProductsByCategory[
-                categorySelect.value
-            ] || []).includes(item.skuName);
+        const checked = (selectedProductsByCategory[categorySelect.value] || []).includes(item.skuName);
 
         productList.innerHTML += `
             <label class="flex items-center gap-2 bg-gray-50 p-2 rounded">
-                <input
-                    type="checkbox"
-                    value="${item.skuName}"
-                    ${checked ? "checked" : ""}
-                    onchange="updateSelection()"
-                >
+                <input type="checkbox" value="${item.skuName}" ${checked ? "checked" : ""} onchange="updateSelection()">
                 <span>${item.skuName}</span>
             </label>
         `;
@@ -1118,37 +994,19 @@ function loadProducts() {
 }
 
 function updateSelection() {
-    selectedProductsByCategory[
-        categorySelect.value
-    ] = [
-        ...document.querySelectorAll(
-            "#productList input:checked"
-        )
+    selectedProductsByCategory[categorySelect.value] = [
+        ...document.querySelectorAll("#productList input:checked")
     ].map(x => x.value);
 
     calcAvailability();
 }
 
 function calcAvailability() {
-    const total =
-        document.querySelectorAll(
-            "#productList input"
-        ).length;
+    const total = document.querySelectorAll("#productList input").length;
+    const selected = document.querySelectorAll("#productList input:checked").length;
 
-    const selected =
-        document.querySelectorAll(
-            "#productList input:checked"
-        ).length;
-
-    availabilityPct.innerText =
-        total
-            ? ((selected / total) * 100).toFixed(1)
-            : 0;
+    availabilityPct.innerText = total ? ((selected / total) * 100).toFixed(1) : 0;
 }
-
-/* =========================================================
-   SHARE OF SHELF
-========================================================= */
 
 function addShelf() {
     const cat = shelfCategory.value;
@@ -1160,9 +1018,7 @@ function addShelf() {
         return;
     }
 
-    const pct =
-        ((ours / total) * 100).toFixed(1);
-
+    const pct = ((ours / total) * 100).toFixed(1);
     const row = {
         category: cat,
         totalFacings: total,
@@ -1170,10 +1026,7 @@ function addShelf() {
         sharePct: pct
     };
 
-    const existingIndex =
-        shelfReportData.findIndex(
-            x => x.category === cat
-        );
+    const existingIndex = shelfReportData.findIndex(x => x.category === cat);
 
     if (existingIndex >= 0) {
         shelfReportData[existingIndex] = row;
@@ -1182,7 +1035,6 @@ function addShelf() {
     }
 
     renderShelf();
-
     totalFacings.value = "";
     ourFacings.value = "";
     shelfCategory.selectedIndex = 0;
@@ -1193,101 +1045,61 @@ function renderShelf() {
 
     shelfReportData.forEach(row => {
         const tr = document.createElement("tr");
-
         tr.innerHTML = `
             <td class="border p-2">${row.category}</td>
             <td class="border p-2">${row.totalFacings}</td>
             <td class="border p-2">${row.ourFacings}</td>
             <td class="border p-2">${row.sharePct}%</td>
         `;
-
         shelfTableBody.appendChild(tr);
     });
 }
 
-/* =========================================================
-   SAVE DRAFT (FIXED)
-========================================================= */
-
 function saveDraft() {
-    localStorage.setItem(
-        "draft",
-        JSON.stringify({
-            intern: intern.value,
-            account: accountSelect.value,
-            outlet: outletSelect.value,
-            selectedProductsByCategory,
-            shelfReportData
-        })
-    );
+    localStorage.setItem("draft", JSON.stringify({
+        intern: intern.value,
+        account: accountSelect.value,
+        outlet: outletSelect.value,
+        selectedProductsByCategory,
+        shelfReportData
+    }));
 
-    localStorage.setItem(
-        "savedDateTime",
-        dateTime.value
-    );
-
+    localStorage.setItem("savedDateTime", dateTime.value);
     alert("Saved successfully");
 }
 
-/* =========================================================
-   LOAD DRAFT (FIXED)
-========================================================= */
-
 window.onload = () => {
-    const draft = JSON.parse(
-        localStorage.getItem("draft") || "null"
-    );
+    const draft = JSON.parse(localStorage.getItem("draft") || "null");
 
     if (localStorage.getItem("savedDateTime")) {
-        dateTime.value =
-            localStorage.getItem("savedDateTime");
+        dateTime.value = localStorage.getItem("savedDateTime");
     }
 
     if (!draft) return;
 
     intern.value = draft.intern || "";
     accountSelect.value = draft.account || "";
-
     accountSelect.onchange();
 
     setTimeout(() => {
         outletSelect.value = draft.outlet || "";
 
-        Object.keys(
-            selectedProductsByCategory
-        ).forEach(key => {
-            delete selectedProductsByCategory[key];
-        });
-
-        Object.assign(
-            selectedProductsByCategory,
-            draft.selectedProductsByCategory || {}
-        );
+        Object.keys(selectedProductsByCategory).forEach(key => delete selectedProductsByCategory[key]);
+        Object.assign(selectedProductsByCategory, draft.selectedProductsByCategory || {});
 
         shelfReportData.length = 0;
-        shelfReportData.push(
-            ...(draft.shelfReportData || [])
-        );
+        shelfReportData.push(...(draft.shelfReportData || []));
 
         renderShelf();
         loadProducts();
-
     }, 200);
 };
-
-/* =========================================================
-   CLEAR DRAFT (FIXED)
-========================================================= */
 
 function clearDraft() {
     localStorage.removeItem("draft");
     localStorage.removeItem("savedDateTime");
     location.reload();
 }
-
-/* =========================================================
-   EXCEL BUILDERS
-========================================================= */
 
 function buildSummary() {
     return [{
@@ -1302,28 +1114,18 @@ function buildSummary() {
 function buildAvailability() {
     const rows = [];
 
-    Object.keys(selectedProductsByCategory)
-        .forEach(cat => {
-            const all = skuMaster.filter(
-                x =>
-                    x.account === accountSelect.value &&
-                    x.category === cat
-            );
+    Object.keys(selectedProductsByCategory).forEach(cat => {
+        const all = skuMaster.filter(x => x.account === accountSelect.value && x.category === cat);
+        const selected = selectedProductsByCategory[cat] || [];
 
-            const selected =
-                selectedProductsByCategory[cat] || [];
-
-            rows.push({
-                Account: accountSelect.value,
-                Outlet: outletSelect.value,
-                Category: cat,
-                Available: selected.join(", "),
-                AvailabilityPercent:
-                    all.length
-                        ? ((selected.length / all.length) * 100).toFixed(1)
-                        : 0
-            });
+        rows.push({
+            Account: accountSelect.value,
+            Outlet: outletSelect.value,
+            Category: cat,
+            Available: selected.join(", "),
+            AvailabilityPercent: all.length ? ((selected.length / all.length) * 100).toFixed(1) : 0
         });
+    });
 
     return rows;
 }
@@ -1331,28 +1133,21 @@ function buildAvailability() {
 function buildNotAvailable() {
     const rows = [];
 
-    Object.keys(selectedProductsByCategory)
-        .forEach(cat => {
-            const all = skuMaster.filter(
-                x =>
-                    x.account === accountSelect.value &&
-                    x.category === cat
-            );
+    Object.keys(selectedProductsByCategory).forEach(cat => {
+        const all = skuMaster.filter(x => x.account === accountSelect.value && x.category === cat);
+        const selected = selectedProductsByCategory[cat] || [];
 
-            const selected =
-                selectedProductsByCategory[cat] || [];
-
-            all.forEach(sku => {
-                if (!selected.includes(sku.skuName)) {
-                    rows.push({
-                        Account: accountSelect.value,
-                        Outlet: outletSelect.value,
-                        SKUCode: sku.skuCode,
-                        SKUName: sku.skuName
-                    });
-                }
-            });
+        all.forEach(sku => {
+            if (!selected.includes(sku.skuName)) {
+                rows.push({
+                    Account: accountSelect.value,
+                    Outlet: outletSelect.value,
+                    SKUCode: sku.skuCode,
+                    SKUName: sku.skuName
+                });
+            }
         });
+    });
 
     return rows;
 }
@@ -1368,61 +1163,63 @@ function buildSOS() {
     }));
 }
 
-/* =========================================================
-   WORKBOOK
-========================================================= */
-
 function createWorkbook() {
     const wb = XLSX.utils.book_new();
 
-    XLSX.utils.book_append_sheet(
-        wb,
-        XLSX.utils.json_to_sheet(buildSummary()),
-        "Summary"
-    );
-
-    XLSX.utils.book_append_sheet(
-        wb,
-        XLSX.utils.json_to_sheet(buildAvailability()),
-        "Availability"
-    );
-
-    XLSX.utils.book_append_sheet(
-        wb,
-        XLSX.utils.json_to_sheet(buildSOS()),
-        "SOS Check"
-    );
-
-    XLSX.utils.book_append_sheet(
-        wb,
-        XLSX.utils.json_to_sheet(buildNotAvailable()),
-        "Not Available SKUs"
-    );
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(buildSummary()), "Summary");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(buildAvailability()), "Availability");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(buildSOS()), "SOS Check");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(buildNotAvailable()), "Not Available SKUs");
 
     return wb;
 }
 
-/* =========================================================
-   DOWNLOAD
-========================================================= */
-
 function downloadExcel() {
-    XLSX.writeFile(
-        createWorkbook(),
-        "StoreAudit.xlsx"
-    );
+    XLSX.writeFile(createWorkbook(), "StoreAudit.xlsx");
 }
 
-/* =========================================================
-   SHARE (SAFE VERSION)
-========================================================= */
-
 async function shareExcel() {
-    downloadExcel();
+    try {
+        const wb = createWorkbook();
 
-    alert(
-        "Excel downloaded successfully. Please share manually from Downloads folder."
-    );
+        const excelBuffer = XLSX.write(wb, {
+            bookType: "xlsx",
+            type: "array"
+        });
+
+        const blob = new Blob([excelBuffer], {
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        });
+
+        const file = new File([blob], "StoreAudit.xlsx", {
+            type: blob.type
+        });
+
+        if (
+            navigator.share &&
+            navigator.canShare &&
+            navigator.canShare({ files: [file] })
+        ) {
+            await navigator.share({
+                files: [file],
+                title: "Store Audit Report",
+                text: "Store Audit Excel Report"
+            });
+        } else {
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "StoreAudit.xlsx";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            alert("Direct sharing is not supported on this browser. File downloaded instead.");
+        }
+
+    } catch (error) {
+        console.log(error);
+        alert("Error while sharing file");
+    }
 }
 
 </script>
