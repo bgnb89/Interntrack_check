@@ -1187,38 +1187,52 @@ async function shareExcel() {
             type: "array"
         });
 
-        const blob = new Blob([excelBuffer], {
-            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        });
+        const blob = new Blob(
+            [excelBuffer],
+            {
+                type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            }
+        );
 
-        const file = new File([blob], "StoreAudit.xlsx", {
-            type: blob.type
-        });
+        const fileName = "StoreAudit.xlsx";
 
-        if (
-            navigator.share &&
-            navigator.canShare &&
-            navigator.canShare({ files: [file] })
-        ) {
-            await navigator.share({
-                files: [file],
-                title: "Store Audit Report",
-                text: "Store Audit Excel Report"
-            });
-        } else {
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.download = "StoreAudit.xlsx";
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+        if (navigator.share) {
+            try {
+                const file = new File(
+                    [blob],
+                    fileName,
+                    {
+                        type: blob.type
+                    }
+                );
 
-            alert("Direct sharing is not supported on this browser. File downloaded instead.");
+                await navigator.share({
+                    files: [file],
+                    title: "Store Audit Report",
+                    text: "Store Audit Excel Report"
+                });
+
+                return;
+
+            } catch (shareError) {
+                console.log("Direct share failed:", shareError);
+            }
         }
+
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        alert(
+            "File downloaded successfully. Please share manually from Downloads folder."
+        );
 
     } catch (error) {
         console.log(error);
-        alert("Error while sharing file");
+        alert("Error while generating Excel file");
     }
 }
 
